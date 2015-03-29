@@ -20,6 +20,17 @@ static void pwm_output_init(struct pwm_output output)
     timer_enable_oc_output(output.timer_peripheral, output.oc_id);
 }
 
+struct motor {
+    struct pwm_output a;
+    struct pwm_output b;
+};
+
+static void motor_init(struct motor motor)
+{
+    pwm_output_init(motor.a);
+    pwm_output_init(motor.b);
+}
+
 static void pwm_output_set(struct pwm_output output, float val)
 {
     uint32_t period = timer_get_period(output.timer_peripheral);
@@ -27,29 +38,17 @@ static void pwm_output_set(struct pwm_output output, float val)
 }
 
 
-static const struct pwm_output motor_outputs[] = {
-    {TIM1, TIM_OC1},
-    {TIM1, TIM_OC2}
+static const struct motor motors[] = {
+    {{TIM1, TIM_OC1}, {TIM1, TIM_OC2}}
 };
 
 static void clock_setup(void)
 {
     rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_120MHZ]);
-    rcc_periph_clock_enable(RCC_GPIOA);
-    rcc_periph_clock_enable(RCC_GPIOE); /* PWM */
-    rcc_periph_clock_enable(RCC_ADC1);
-    rcc_periph_clock_enable(RCC_TIM1); /* PWM */
-    rcc_periph_clock_enable(RCC_GPIOA); /* USB */
-    rcc_periph_clock_enable(RCC_OTGFS); /* USB */
-
 }
 
 static void gpio_setup(void)
 {
-    gpio_mode_setup(GPIOE, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9);
-    gpio_mode_setup(GPIOE, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11);
-    gpio_set_af(GPIOE, GPIO_AF1, GPIO9 );
-    gpio_set_af(GPIOE, GPIO_AF1, GPIO11);
     rcc_periph_clock_enable(RCC_GPIOD);
     gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
 }
@@ -57,12 +56,16 @@ static void gpio_setup(void)
 static void timer_setup(void)
 {
     size_t i;
+    rcc_periph_clock_enable(RCC_GPIOE); /* PWM */
+    rcc_periph_clock_enable(RCC_TIM1); /* PWM */
+    gpio_mode_setup(GPIOE, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11);
+    gpio_set_af(GPIOE, GPIO_AF1, GPIO9 | GPIO11);
     rcc_periph_clock_enable(RCC_TIM1);
     timer_reset(TIM1);
     timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
                    TIM_CR1_DIR_UP);
-    for (i = 0; i < sizeof(motor_outputs)/sizeof(motor_outputs[0]); ++i)
-        pwm_output_init(motor_outputs[i]);
+    for (i = 0; i < sizeof(motors)/sizeof(motors[0]); ++i)
+        motor_init(motors[i]);
     timer_enable_break_main_output(TIM1);
     timer_set_period(TIM1, 6000);
     timer_enable_counter(TIM1);
@@ -70,6 +73,8 @@ static void timer_setup(void)
 
 static void adc_setup(void)
 {
+    rcc_periph_clock_enable(RCC_ADC1);
+    rcc_periph_clock_enable(RCC_GPIOA);
     gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
     adc_off(ADC1);
     adc_disable_scan_mode(ADC1);
@@ -89,20 +94,10 @@ static float read_adc_simple(uint8_t channel)
     return (float)reg16 / (1<<12);
 }
 
-static void set_motor(struct pwm_output a, struct pwm_output b, float val)
+static void set_motor(struct motor motor, float val)
 {
-    (void) b;
-    pwm_output_set(a, val);
-    /*
-    if (val < 0) {
-        pwm_output_set(a, val + 1);
-        pwm_output_set(b, val);
-    }
-    else {
-        pwm_output_set(a, val);
-        pwm_output_set(b, 1.0f - val);
-    }
-    */
+    pwm_output_set(motor.a, val);
+    pwm_output_set(motor.b, 1.0f - val);
 }
 
 int main(void)
@@ -128,8 +123,7 @@ int main(void)
 
         val = 3 * error + integral + derivative * 20.0f;
 
-        pwm_output_set(motor_outputs[1], 1.0f - val);
-        pwm_output_set(motor_outputs[0], val);
+        set_motor(motors[0], val);
         gpio_toggle(GPIOD, GPIO12);
         for (i = 0; i < 50000; i++)
             __asm__("nop");
