@@ -37,7 +37,6 @@ static void pwm_output_set(struct pwm_output output, float val)
     timer_set_oc_value(output.timer_peripheral, output.oc_id, period * val);
 }
 
-
 static const struct motor motors[] = {
     {{TIM1, TIM_OC1}, {TIM1, TIM_OC2}}
 };
@@ -100,6 +99,27 @@ static void set_motor(struct motor motor, float val)
     pwm_output_set(motor.b, 1.0f - val);
 }
 
+struct pid_state {
+    float prev_error;
+    float integral;
+};
+
+struct pid_params {
+    float p;
+    float i;
+    float d;
+};
+
+static float pid(struct pid_state *state, struct pid_params k, float measured,
+                 float setpoint, float delta_t)
+{
+    float error = setpoint - measured;
+    state->integral += error * delta_t; /* TODO gapping the integral */
+    float derivative = (state->prev_error - error) / delta_t;
+    state->prev_error = error;
+    return k.p * error + k.i * state->integral + k.d * derivative;
+}
+
 int main(void)
 {
     int i;
@@ -110,24 +130,16 @@ int main(void)
     adc_setup();
 
     float setpoint = 0.5f;
-    float error;
-    float integral = 0;
-    float derivative = 0;
-    float prev_error = 0;
-    float val;
+
+    struct pid_state state = {.prev_error = 0.0f, .integral = 0.0f};
+    struct pid_params params = {.p = 10.0f, .i = 10.0f, .d = 0.0f};
 
     while (1) {
-        error = setpoint - read_adc_simple(0);
-        integral += error * 0.01f;
-        derivative = error - prev_error;
-
-        val = 3 * error + integral + derivative * 20.0f;
-
-        set_motor(motors[0], val);
+        set_motor(motors[0], pid(&state, params, read_adc_simple(0), setpoint,
+                  10000.0f / 120000000.0f));
         gpio_toggle(GPIOD, GPIO12);
         for (i = 0; i < 50000; i++)
             __asm__("nop");
-        prev_error = error;
     }
 
     return 0;
