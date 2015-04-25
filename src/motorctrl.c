@@ -7,22 +7,65 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "spinlock.h"
+#include "pid.h"
+
+struct pin {
+    uint32_t port;
+    uint16_t pin;
+};
+
+struct pwm_output { /* TODO add pin */
+    uint32_t timer_peripheral; /* e.g. TIM1 */
+    enum tim_oc_id oc_id; /* e.g. TIM_OC1 */
+};
+
+struct motor {
+    struct pwm_output pwm;
+    struct pin dira;
+    struct pin dirb;
+};
+
+struct pot {
+    uint32_t adc;
+    uint8_t channel;
+    struct pin pin;
+};
+
+struct joint {
+    struct motor motor;
+    struct pot pot;
+};
+
+static const struct joint joints[] = {
+    {
+        .motor = {
+            {.timer_peripheral = TIM4, .oc_id = TIM_OC1}, 
+            {.port = GPIOE, .pin = GPIO7}, 
+            {.port = GPIOE, .pin = GPIO9}
+        },
+        .pot = {
+            .adc = ADC1,
+            .channel = 0,
+            .pin = { .port = GPIOA, .pin = GPIO0 }
+        }
+    }
+};
+
+
+static void pot_input_init(struct pot pot)
+{
+    gpio_mode_setup(pot.pin.port, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, pot.pin.pin);
+    adc_off(ADC1);
+    adc_disable_scan_mode(ADC1);
+    adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_3CYC);
+    adc_power_on(ADC1);
+ 
+}
 
 static uint32_t timer_get_period(uint32_t timer_peripheral)
 {
     return TIM_ARR(timer_peripheral);
 }
-
-struct pwm_output {
-    uint32_t timer_peripheral; /* e.g. TIM1 */
-    enum tim_oc_id oc_id; /* e.g. TIM_OC1 */
-};
-
-struct joint {
-    struct pwm_output pwm;
-    uint32_t dira_pin;
-    uint32_t dirb_pin;
-};
 
 static void pwm_output_init(struct pwm_output output)
 {
@@ -30,11 +73,22 @@ static void pwm_output_init(struct pwm_output output)
     timer_enable_oc_output(output.timer_peripheral, output.oc_id);
 }
 
-
-static void motor_init(struct joint joint)
+static void motor_dir_pin_init(struct pin pin)
 {
-    pwm_output_init(joint.pwm);
-    //pwm_output_init(motor.b);
+    gpio_mode_setup(pin.port, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, pin.pin);
+}
+
+static void motor_init(struct motor motor)
+{
+    pwm_output_init(motor.pwm);
+    motor_dir_pin_init(motor.dira);
+    motor_dir_pin_init(motor.dirb);
+}
+
+static void joint_init(struct joint joint)
+{
+    motor_init(joint.motor);
+    pot_input_init(joint.pot);
 }
 
 static void pwm_output_set(struct pwm_output output, float val)
@@ -42,10 +96,6 @@ static void pwm_output_set(struct pwm_output output, float val)
     uint32_t period = timer_get_period(output.timer_peripheral);
     timer_set_oc_value(output.timer_peripheral, output.oc_id, period * val);
 }
-
-static const struct joint joints[] = {
-    {{TIM4, TIM_OC1}, }
-};
 
 static void clock_setup(void)
 {
@@ -55,12 +105,12 @@ static void clock_setup(void)
 static void gpio_setup(void)
 {
     rcc_periph_clock_enable(RCC_GPIOD);
+    rcc_periph_clock_enable(RCC_GPIOE); /* dirs */
     gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
 }
 
 static void timer_setup(void)
 {
-    size_t i;
     rcc_periph_clock_enable(RCC_GPIOD); /* PWM */
     rcc_periph_clock_enable(RCC_TIM4); /* PWM */
     gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO12);
@@ -69,8 +119,7 @@ static void timer_setup(void)
     timer_reset(TIM4);
     timer_set_mode(TIM4, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
                    TIM_CR1_DIR_UP);
-    for (i = 0; i < sizeof(joints)/sizeof(joints[0]); ++i)
-        motor_init(joints[i]);
+    gpio_set(joints[0].motor.dira.port, joints[0].motor.dira.pin);
     timer_enable_break_main_output(TIM4);
     timer_set_period(TIM4, 12000);
     timer_enable_counter(TIM4);
@@ -87,43 +136,32 @@ static void adc_setup(void)
     adc_power_on(ADC1);
 }
 
-static float read_adc_simple(uint8_t channel)
+static float read_adc_simple(uint32_t adc, uint8_t channel)
 {
     uint8_t channel_array[16];
     channel_array[0] = channel;
-    adc_set_regular_sequence(ADC1, 1, channel_array);
-    adc_start_conversion_regular(ADC1);
-    while (!adc_eoc(ADC1))
+    adc_set_regular_sequence(adc, 1, channel_array);
+    //adc_set_regular_sequence(ADC1, 1, channel_array);
+    adc_start_conversion_regular(adc);
+    //adc_start_conversion_regular(ADC1);
+    while (!adc_eoc(adc))
         ;
-    uint16_t reg16 = adc_read_regular(ADC1);
+    uint16_t reg16 = adc_read_regular(adc);
     return (float)reg16 / (1<<12);
 }
 
-static void set_motor(struct joint joint, float val)
+static void set_motor(struct motor motor, float val)
 {
-    pwm_output_set(joint.pwm, val);
-    //pwm_output_set(motor.b, 1.0f - val);
-}
-
-struct pid_state {
-    float prev_error;
-    float integral;
-};
-
-struct pid_params {
-    float p;
-    float i;
-    float d;
-};
-
-static float pid(struct pid_state *state, struct pid_params k, float measured,
-                 float setpoint, float delta_t)
-{
-    float error = setpoint - measured;
-    state->integral += error * delta_t; /* TODO gapping the integral */
-    float derivative = (state->prev_error - error) / delta_t;
-    state->prev_error = error;
-    return k.p * error + k.i * state->integral + k.d * derivative;
+    if (val > 0.0f) {
+        pwm_output_set(motor.pwm, val);
+        gpio_set(motor.dira.port, motor.dira.pin);
+        gpio_clear(motor.dirb.port, motor.dirb.pin);
+    }
+    else {
+        pwm_output_set(motor.pwm, -val);
+        gpio_set(motor.dirb.port, motor.dirb.pin);
+        gpio_clear(motor.dira.port, motor.dira.pin);
+    }
 }
 
 static void uart_setup(void)
@@ -166,21 +204,29 @@ int main(void)
     int i;
     float duty = 0.1f;
 
+    float angle_setpoint = 0.5;
+
     clock_setup();
     gpio_setup();
     timer_setup();
     adc_setup();
     uart_setup();
 
+    for (i = 0; (unsigned)i < sizeof(joints)/sizeof(joints[0]); ++i)
+        joint_init(joints[i]);
     /*
     float setpoint = 0.75f;
+    */
 
     struct pid_state state = {.prev_error = 0.0f, .integral = 0.0f};
-    struct pid_params params = {.p = 10.0f, .i = 10.0f, .d = 0.0f};
-    */
+    //struct pid_params params = {.p = 10.0f, .i = 10.0f, .d = 0.0f};
+    struct pid_params params = {.p = 0.001f, .i = 00.1f, .d = 0.0f,
+                                .i_max = 0.01f};
+
     printf("hullo\n\r");
 
-    pwm_output_set(joints[0].pwm, duty);
+    //pwm_output_set(joints[0].motor.pwm, duty);
+    set_motor(joints[0].motor, duty); 
     while (1) {
         //usart_putc('e');
         //printf("lel\n");
@@ -193,12 +239,26 @@ int main(void)
         //gpio_toggle(GPIOD, GPIO12);
         for (i = 0; i < 50000; i++)
             __asm__("nop");
-        gpio_toggle(GPIOD, GPIO14);
+        //gpio_toggle(GPIOD, GPIO14);
+        float current_angle = read_adc_simple(joints[0].pot.adc,
+                                              joints[0].pot.channel);
+        /*printf("adc: %f\n\r", read_adc_simple(joints[0].pot.adc,
+                                         joints[0].pot.channel));*/
+        //printf("adc: %f\n\r", current_angle);
+        printf("integral: %f\n\r", state.integral);
+        /*
         if (scanf("%f", &duty) == 1) {
             printf("%f\n", duty);
-            pwm_output_set(joints[0].pwm, duty);
+            set_motor(joints[0].motor, duty); 
         }
-            
+        */
+        /*
+        if (scanf("%f", &angle_setpoint) == 1) {
+            printf("angle_setpoint: %f\n", angle_setpoint);
+        }    
+        */
+        set_motor(joints[0].motor, pid(&state, params, current_angle,
+                  angle_setpoint, 10000.0f / 120000000.0f));
     }
 
     return 0;
