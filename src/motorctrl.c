@@ -204,7 +204,7 @@ int main(void)
     int i;
     float duty = 0.1f;
 
-    float angle_setpoint = 0.5;
+    float angle_setpoint = 0.512;
 
     clock_setup();
     gpio_setup();
@@ -220,7 +220,7 @@ int main(void)
 
     struct pid_state state = {.prev_error = 0.0f, .integral = 0.0f};
     //struct pid_params params = {.p = 10.0f, .i = 10.0f, .d = 0.0f};
-    struct pid_params params = {.p = 0.001f, .i = 00.1f, .d = 0.0f,
+    struct pid_params params = {.p = 10.0f, .i = 00.0f, .d = 0.0f,
                                 .i_max = 0.01f};
 
     printf("hullo\n\r");
@@ -228,23 +228,13 @@ int main(void)
     //pwm_output_set(joints[0].motor.pwm, duty);
     set_motor(joints[0].motor, duty); 
     while (1) {
-        //usart_putc('e');
-        //printf("lel\n");
-        //setpoint += 0.01;
-        /* 
-        set_motor(motors[0], pid(&state, params, read_adc_simple(0), setpoint,
-                  10000.0f / 120000000.0f));
-                  */
-        //set_motor(motors[0], 0.5);
-        //gpio_toggle(GPIOD, GPIO12);
         for (i = 0; i < 50000; i++)
             __asm__("nop");
-        //gpio_toggle(GPIOD, GPIO14);
         float current_angle = read_adc_simple(joints[0].pot.adc,
                                               joints[0].pot.channel);
         /*printf("adc: %f\n\r", read_adc_simple(joints[0].pot.adc,
                                          joints[0].pot.channel));*/
-        //printf("adc: %f\n\r", current_angle);
+        printf("adc: %f, ", current_angle);
         printf("integral: %f\n\r", state.integral);
         /*
         if (scanf("%f", &duty) == 1) {
@@ -257,8 +247,11 @@ int main(void)
             printf("angle_setpoint: %f\n", angle_setpoint);
         }    
         */
+        
         set_motor(joints[0].motor, pid(&state, params, current_angle,
                   angle_setpoint, 10000.0f / 120000000.0f));
+        //set_motor(joints[0].motor, 0.9); 
+        
     }
 
     return 0;
