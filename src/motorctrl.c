@@ -230,7 +230,6 @@ static void joint_control(struct joint *joint, float delta_t)
 int main(void)
 {
     int i;
-    float duty = 0.1f;
 
     clock_setup();
     gpio_setup();
@@ -243,37 +242,10 @@ int main(void)
 
     printf("hullo\n\r");
 
-    //pwm_output_set(joints[0].motor.pwm, duty);
-    set_motor(joints[0].motor, duty); 
     while (1) {
         for (i = 0; i < 50000; i++)
             __asm__("nop");
-        #if 0
-        float current_angle = pot_input_read(joints[0].pot);
-        /*printf("adc: %f\n\r", read_adc_simple(joints[0].pot.adc,
-                                         joints[0].pot.channel));*/
-        printf("adc: %f, ", current_angle);
-        printf("integral: %f\n\r", joints[0].pid_state.integral);
-        /*
-        if (scanf("%f", &duty) == 1) {
-            printf("%f\n", duty);
-            set_motor(joints[0].motor, duty); 
-        }
-        */
-        /*
-        if (scanf("%f", &angle_setpoint) == 1) {
-            printf("angle_setpoint: %f\n", angle_setpoint);
-        }    
-        */
-        
-        set_motor(joints[0].motor, pid(&joints[0].pid_state,
-                  joints[0].pid_params, current_angle,
-                  joints[0].setpoint, 10000.0f / 120000000.0f));
-        //set_motor(joints[0].motor, 0.9); 
-        #else
         joint_control(&joints[0], 10000.0f / 120000000.0f);
-        #endif
-        
     }
 
     return 0;
