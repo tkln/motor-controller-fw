@@ -215,6 +215,18 @@ void usart3_isr(void)
     recv_buffer[recv_w_idx++ % RECV_BUFFER_SIZE] = USART_DR(USART3);
 }
 
+static void joint_control(struct joint *joint, float delta_t)
+{
+    float measured = pot_input_read(joint->pot);
+    float output = pid(&joint->pid_state, joint->pid_params, measured,
+                       joint->setpoint, delta_t);
+    #ifdef DEBUG
+    printf("m: %f, s: %f, o: %f, i: %f\n\r", measured, joint->setpoint,
+            output, joint->id_state.i);
+    #endif
+    set_motor(joint->motor, output);
+}
+
 int main(void)
 {
     int i;
@@ -236,6 +248,7 @@ int main(void)
     while (1) {
         for (i = 0; i < 50000; i++)
             __asm__("nop");
+        #if 0
         float current_angle = pot_input_read(joints[0].pot);
         /*printf("adc: %f\n\r", read_adc_simple(joints[0].pot.adc,
                                          joints[0].pot.channel));*/
@@ -257,6 +270,9 @@ int main(void)
                   joints[0].pid_params, current_angle,
                   joints[0].setpoint, 10000.0f / 120000000.0f));
         //set_motor(joints[0].motor, 0.9); 
+        #else
+        joint_control(&joints[0], 10000.0f / 120000000.0f);
+        #endif
         
     }
 
