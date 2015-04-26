@@ -153,13 +153,16 @@ static float read_adc_simple(uint32_t adc, uint8_t channel)
     uint8_t channel_array[16];
     channel_array[0] = channel;
     adc_set_regular_sequence(adc, 1, channel_array);
-    //adc_set_regular_sequence(ADC1, 1, channel_array);
     adc_start_conversion_regular(adc);
-    //adc_start_conversion_regular(ADC1);
     while (!adc_eoc(adc))
         ;
     uint16_t reg16 = adc_read_regular(adc);
     return (float)reg16 / (1<<12);
+}
+
+static float pot_input_read(struct pot pot)
+{
+    return read_adc_simple(pot.adc, pot.channel);
 }
 
 static void set_motor(struct motor motor, float val)
@@ -244,8 +247,7 @@ int main(void)
     while (1) {
         for (i = 0; i < 50000; i++)
             __asm__("nop");
-        float current_angle = read_adc_simple(joints[0].pot.adc,
-                                              joints[0].pot.channel);
+        float current_angle = pot_input_read(joints[0].pot);
         /*printf("adc: %f\n\r", read_adc_simple(joints[0].pot.adc,
                                          joints[0].pot.channel));*/
         printf("adc: %f, ", current_angle);
