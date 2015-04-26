@@ -36,6 +36,7 @@ struct joint {
     struct pot pot;
     struct pid_state pid_state;
     struct pid_params pid_params;
+    float setpoint;
 };
 
 static struct joint joints[] = {
@@ -219,8 +220,6 @@ int main(void)
     int i;
     float duty = 0.1f;
 
-    float angle_setpoint = 0.512;
-
     clock_setup();
     gpio_setup();
     timer_setup();
@@ -229,16 +228,6 @@ int main(void)
 
     for (i = 0; (unsigned)i < sizeof(joints)/sizeof(joints[0]); ++i)
         joint_init(joints[i]);
-    /*
-    float setpoint = 0.75f;
-    */
-
-    /*
-    struct pid_state state = {.prev_error = 0.0f, .integral = 0.0f};
-    struct pid_params params = {.p = 10.0f, .i = 10.0f, .d = 0.0f};
-    struct pid_params params = {.p = 10.0f, .i = 00.0f, .d = 0.0f,
-                                .i_max = 0.01f};
-                                */
 
     printf("hullo\n\r");
 
@@ -266,7 +255,7 @@ int main(void)
         
         set_motor(joints[0].motor, pid(&joints[0].pid_state,
                   joints[0].pid_params, current_angle,
-                  angle_setpoint, 10000.0f / 120000000.0f));
+                  joints[0].setpoint, 10000.0f / 120000000.0f));
         //set_motor(joints[0].motor, 0.9); 
         
     }
