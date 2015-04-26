@@ -57,10 +57,11 @@ static struct joint joints[] = {
         },
         .pid_params = {
             .p = 10.0f,
-            .i = 0.0f,
+            .i = 10.0f,
             .d = 0.0f,
-            .i_max = 0.0f
-        }
+            .i_max = 10.2f
+        },
+        .setpoint = 0.5f
     }
 };
 
@@ -134,7 +135,7 @@ static void timer_setup(void)
                    TIM_CR1_DIR_UP);
     gpio_set(joints[0].motor.dira.port, joints[0].motor.dira.pin);
     timer_enable_break_main_output(TIM4);
-    timer_set_period(TIM4, 12000);
+    timer_set_period(TIM4, 3000);
     timer_enable_counter(TIM4);
 }
 
@@ -168,6 +169,10 @@ static float pot_input_read(struct pot pot)
 
 static void set_motor(struct motor motor, float val)
 {
+    if (val >= 1.0f)
+        val = 0.99f;
+    if (-val <= -1.0f)
+        val = -0.99f;
     if (val > 0.0f) {
         pwm_output_set(motor.pwm, 1 - val);
         gpio_set(motor.dira.port, motor.dira.pin);
@@ -215,6 +220,8 @@ void usart3_isr(void)
     recv_buffer[recv_w_idx++ % RECV_BUFFER_SIZE] = USART_DR(USART3);
 }
 
+#define DEBUG lel
+
 static void joint_control(struct joint *joint, float delta_t)
 {
     float measured = pot_input_read(joint->pot);
@@ -222,7 +229,7 @@ static void joint_control(struct joint *joint, float delta_t)
                        joint->setpoint, delta_t);
     #ifdef DEBUG
     printf("m: %f, s: %f, o: %f, i: %f\n\r", measured, joint->setpoint,
-            output, joint->id_state.i);
+            output, joint->pid_state.integral);
     #endif
     set_motor(joint->motor, output);
 }
@@ -243,9 +250,9 @@ int main(void)
     printf("hullo\n\r");
 
     while (1) {
-        for (i = 0; i < 50000; i++)
+        for (i = 0; i < 500000; i++)
             __asm__("nop");
-        joint_control(&joints[0], 10000.0f / 120000000.0f);
+        joint_control(&joints[0], 500000.0f / 120000000.0f);
     }
 
     return 0;
