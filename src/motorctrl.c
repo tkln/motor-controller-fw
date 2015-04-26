@@ -34,19 +34,31 @@ struct pot {
 struct joint {
     struct motor motor;
     struct pot pot;
+    struct pid_state pid_state;
+    struct pid_params pid_params;
 };
 
-static const struct joint joints[] = {
+static struct joint joints[] = {
     {
         .motor = {
-            {.timer_peripheral = TIM4, .oc_id = TIM_OC1}, 
-            {.port = GPIOE, .pin = GPIO7}, 
-            {.port = GPIOE, .pin = GPIO9}
+            .pwm = {.timer_peripheral = TIM4, .oc_id = TIM_OC1}, 
+            .dira = {.port = GPIOE, .pin = GPIO7}, 
+            .dirb = {.port = GPIOE, .pin = GPIO9}
         },
         .pot = {
             .adc = ADC1,
             .channel = 0,
             .pin = { .port = GPIOA, .pin = GPIO0 }
+        },
+        .pid_state = {
+            .prev_error = 0.0f,
+            .integral = 0.0f
+        },
+        .pid_params = {
+            .p = 10.0f,
+            .i = 0.0f,
+            .d = 0.0f,
+            .i_max = 0.0f
         }
     }
 };
@@ -218,10 +230,12 @@ int main(void)
     float setpoint = 0.75f;
     */
 
+    /*
     struct pid_state state = {.prev_error = 0.0f, .integral = 0.0f};
-    //struct pid_params params = {.p = 10.0f, .i = 10.0f, .d = 0.0f};
+    struct pid_params params = {.p = 10.0f, .i = 10.0f, .d = 0.0f};
     struct pid_params params = {.p = 10.0f, .i = 00.0f, .d = 0.0f,
                                 .i_max = 0.01f};
+                                */
 
     printf("hullo\n\r");
 
@@ -235,7 +249,7 @@ int main(void)
         /*printf("adc: %f\n\r", read_adc_simple(joints[0].pot.adc,
                                          joints[0].pot.channel));*/
         printf("adc: %f, ", current_angle);
-        printf("integral: %f\n\r", state.integral);
+        printf("integral: %f\n\r", joints[0].pid_state.integral);
         /*
         if (scanf("%f", &duty) == 1) {
             printf("%f\n", duty);
@@ -248,7 +262,8 @@ int main(void)
         }    
         */
         
-        set_motor(joints[0].motor, pid(&state, params, current_angle,
+        set_motor(joints[0].motor, pid(&joints[0].pid_state,
+                  joints[0].pid_params, current_angle,
                   angle_setpoint, 10000.0f / 120000000.0f));
         //set_motor(joints[0].motor, 0.9); 
         
