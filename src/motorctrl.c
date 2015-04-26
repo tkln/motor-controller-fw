@@ -153,12 +153,12 @@ static float read_adc_simple(uint32_t adc, uint8_t channel)
 static void set_motor(struct motor motor, float val)
 {
     if (val > 0.0f) {
-        pwm_output_set(motor.pwm, val);
+        pwm_output_set(motor.pwm, 1 - val);
         gpio_set(motor.dira.port, motor.dira.pin);
         gpio_clear(motor.dirb.port, motor.dirb.pin);
     }
     else {
-        pwm_output_set(motor.pwm, -val);
+        pwm_output_set(motor.pwm, 1 - (-val));
         gpio_set(motor.dirb.port, motor.dirb.pin);
         gpio_clear(motor.dira.port, motor.dira.pin);
     }
