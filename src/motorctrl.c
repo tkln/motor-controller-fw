@@ -12,9 +12,11 @@
 struct pin {
     uint32_t port;
     uint16_t pin;
+    uint16_t af;
 };
 
-struct pwm_output { /* TODO add pin */
+struct pwm_output {
+    struct pin pin;
     uint32_t timer_peripheral; /* e.g. TIM1 */
     enum tim_oc_id oc_id; /* e.g. TIM_OC1 */
 };
@@ -38,6 +40,36 @@ struct joint {
     struct pid_params pid_params;
     float setpoint;
 };
+
+static struct joint joints[] = {
+    {
+        .motor = {
+            .pwm = {.timer_peripheral = TIM4,
+                    .oc_id = TIM_OC1,
+                    .pin = {.port = GPIOD, .pin = GPIO12, .af = GPIO_AF2}
+            }, 
+            .dira = {.port = GPIOE, .pin = GPIO7}, 
+            .dirb = {.port = GPIOE, .pin = GPIO9}
+        },
+        .pot = {
+            .adc = ADC1,
+            .channel = 0,
+            .pin = { .port = GPIOA, .pin = GPIO0 }
+        },
+        .pid_state = {
+            .prev_error = 0.0f,
+            .integral = 0.0f
+        },
+        .pid_params = {
+            .p = 10.0f,
+            .i = 20.0f,
+            .d = 0.0f,
+            .i_max = 0.01f
+        },
+        .setpoint = 0.49f
+    }
+};
+
 
 #define USART_BUF_LEN 128 + 1
 
@@ -77,6 +109,8 @@ static uint32_t timer_get_period(uint32_t timer_peripheral)
 
 static void pwm_output_init(struct pwm_output output)
 {
+    gpio_mode_setup(output.pin.port, GPIO_MODE_AF, GPIO_PUPD_NONE, output.pin.pin);
+    gpio_set_af(output.pin.port, output.pin.af, output.pin.pin);
     timer_set_oc_mode(output.timer_peripheral, output.oc_id, TIM_OCM_PWM1);
     timer_enable_oc_output(output.timer_peripheral, output.oc_id);
 }
@@ -121,13 +155,10 @@ static void timer_setup(void)
 {
     rcc_periph_clock_enable(RCC_GPIOD); /* PWM */
     rcc_periph_clock_enable(RCC_TIM4); /* PWM */
-    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO12);
-    gpio_set_af(GPIOD, GPIO_AF2, GPIO12);
     rcc_periph_clock_enable(RCC_TIM4);
     timer_reset(TIM4);
     timer_set_mode(TIM4, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
                    TIM_CR1_DIR_UP);
-    gpio_set(joints[0].motor.dira.port, joints[0].motor.dira.pin);
     timer_enable_break_main_output(TIM4);
     timer_set_period(TIM4, 3000);
     timer_enable_counter(TIM4);
