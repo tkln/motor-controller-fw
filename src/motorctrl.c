@@ -39,32 +39,26 @@ struct joint {
     float setpoint;
 };
 
-static struct joint joints[] = {
-    {
-        .motor = {
-            .pwm = {.timer_peripheral = TIM4, .oc_id = TIM_OC1}, 
-            .dira = {.port = GPIOE, .pin = GPIO7}, 
-            .dirb = {.port = GPIOE, .pin = GPIO9}
-        },
-        .pot = {
-            .adc = ADC1,
-            .channel = 0,
-            .pin = { .port = GPIOA, .pin = GPIO0 }
-        },
-        .pid_state = {
-            .prev_error = 0.0f,
-            .integral = 0.0f
-        },
-        .pid_params = {
-            .p = 10.0f,
-            .i = 20.0f,
-            .d = 0.0f,
-            .i_max = 0.01f
-        },
-        .setpoint = 0.49f
-    }
-};
+#define USART_BUF_LEN 128 + 1
 
+volatile int new_message = 0;
+volatile uint8_t usart_buf[USART_BUF_LEN] = {0};
+volatile uint16_t usart_msg_len = 0;
+
+void usart3_isr(void)
+{
+    static uint8_t data;
+    if ((USART_CR1(USART3) & USART_CR1_RXNEIE) &&
+        (USART_SR(USART3) & USART_SR_RXNE)) {
+        usart_msg_len %= (USART_BUF_LEN - 1);
+        data = usart_recv(USART3);
+        usart_buf[usart_msg_len++] = data;
+        if (data == '\r') {
+            usart_buf[usart_msg_len] = '\0';
+            new_message = 1;
+        }
+    }
+}
 
 static void pot_input_init(struct pot pot)
 {
@@ -198,29 +192,12 @@ static void uart_setup(void)
     usart_set_parity(USART3, USART_PARITY_NONE);
     usart_set_flow_control(USART3, USART_FLOWCONTROL_NONE);
     usart_enable(USART3);
-    //nvic_enable_irq(NVIC_USART3_IRQ);
-    //usart_enable_rx_interrupt(USART3);
+    nvic_enable_irq(NVIC_USART3_IRQ);
+    usart_enable_rx_interrupt(USART3);
 }
 
-/*
-static void usart_putc(char c)
-{
-    while (!(USART_SR(USART3) & USART_SR_TXE))
-        ;
-    USART_DR(USART3) = (uint16_t) c & 0xff;
-}
-*/
 
-#define RECV_BUFFER_SIZE 128
-char recv_buffer[RECV_BUFFER_SIZE];
-volatile unsigned int recv_w_idx;
-
-void usart3_isr(void)
-{
-    recv_buffer[recv_w_idx++ % RECV_BUFFER_SIZE] = USART_DR(USART3);
-}
-
-#define DEBUG lel
+#define DEBUG
 
 static void joint_control(struct joint *joint, float delta_t)
 {
@@ -253,6 +230,12 @@ int main(void)
         for (i = 0; i < 500000; i++)
             __asm__("nop");
         joint_control(&joints[0], 500000.0f / 120000000.0f);
+        if (new_message) {
+            printf("\\o/\n\r");
+            sscanf((const char *)usart_buf, "%f", &joints[0].setpoint);
+            new_message = 0;
+            usart_msg_len = 0;
+        }
     }
 
     return 0;
