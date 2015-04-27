@@ -57,11 +57,11 @@ static struct joint joints[] = {
         },
         .pid_params = {
             .p = 10.0f,
-            .i = 10.0f,
+            .i = 20.0f,
             .d = 0.0f,
-            .i_max = 10.2f
+            .i_max = 0.01f
         },
-        .setpoint = 0.5f
+        .setpoint = 0.49f
     }
 };
 
