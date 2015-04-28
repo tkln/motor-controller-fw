@@ -225,9 +225,6 @@ static void uart_setup(void)
     usart_enable_rx_interrupt(USART3);
 }
 
-
-//#define DEBUG
-
 static void joint_control(struct joint *joint, float delta_t)
 {
     float measured = pot_input_read(joint->pot);
@@ -239,11 +236,13 @@ static void joint_control(struct joint *joint, float delta_t)
     set_motor(joint->motor, output);
 }
 
+const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper %i\n";
+
 static void response(void)
 {
-    printf("%f, %f, %f, %f, %f, %f\n\r", joints[0].adc_angle,
-           joints[1].adc_angle, joints[2].adc_angle, joints[3].adc_angle,
-           joints[4].adc_angle, joints[5].adc_angle);
+    printf(state_msg_format, joints[0].adc_angle, joints[1].adc_angle,
+           joints[2].adc_angle, joints[3].adc_angle, joints[4].adc_angle,
+           joints[5].adc_angle, safemode, brake, gripper);
 }
 
 static void debug(void)
@@ -255,32 +254,35 @@ static void debug(void)
                joints[i].pid_state.integral);
 }
 
+static void set_setpoints(float *setpoints)
+{
+    size_t i;
+    for (i = 0; i < sizeof(joints) / sizeof(joints[0]); ++i)
+        joints[i].setpoint = setpoints[i];
+}
+
 static void handle_msg(void)
 {
-    float setpoints[6];
-    int i;
+    float setpoints[sizeof(joints) / sizeof(joints[0])];
+    int ret;
+    int new_safemode = 1, new_brake = 1, new_gripper = 1;
     char *msg = (char *)usart_buf;
 
-    if (sscanf((const char *) usart_buf, "%f, %f, %f, %f, %f, %f",
-               &setpoints[0], &setpoints[1], &setpoints[2], &setpoints[3],
-               &setpoints[4], &setpoints[5]) == 6) {
-        for (i = 0; i < 6; ++i)
-            joints[i].setpoint = setpoints[i];
+    ret = sscanf(msg, state_msg_format, setpoints, setpoints + 1, setpoints + 2,
+                setpoints + 3, setpoints + 4, setpoints + 5, &new_safemode,
+                &new_brake, &new_gripper);
+
+    if (ret == 9) {
+        set_setpoints(setpoints);
+        safemode = new_safemode;
+        brake = new_brake;
+        gripper = new_gripper;
     }
-    else if (!strncmp(msg, "safeoff", 7)) {
-        safemode = 0;
-    }
-    else if (!strncmp(msg, "safeon", 7)) {
-        safemode = 1;
-    }
-    else if (!strncmp(msg, "brkoff", 6)) {
-        brake = 0;
-    }
-    else if (!strncmp(msg, "brkon", 5)) {
-        brake = 1;
-    }
-    else if (!strncmp(msg, "debug", 5)) {
+    else if(!strncmp(msg, "debug", 5)) {
         debug();
+    }
+    else {
+        printf("invalid command\n");
     }
 
     response();
