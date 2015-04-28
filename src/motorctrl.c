@@ -34,15 +34,15 @@ struct pot {
 };
 
 struct joint {
-    struct motor motor;
-    struct pot pot;
+    const struct motor motor;
+    const struct pot pot;
     struct pid_state pid_state;
     struct pid_params pid_params;
     float setpoint;
 };
 
 static struct joint joints[] = {
-    {
+    { /* joint 1, joints[0] */
         .motor = {
             .pwm = {.timer_peripheral = TIM4,
                     .oc_id = TIM_OC1,
