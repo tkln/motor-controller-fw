@@ -212,6 +212,7 @@ static struct joint joints[] = {
 
 volatile int safemode = 1;
 volatile int brake = 1;
+volatile int gripper = 0;
 
 const struct pin brake_relay_pin = {
     .port = GPIOD, .pin = GPIO1
@@ -484,6 +485,10 @@ int main(void)
             gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);
         else
             gpio_set(brake_relay_pin.port, brake_relay_pin.pin);
+        if (gripper)
+            gpio_set(gripper_relay_pin.port, gripper_relay_pin.pin);
+        else
+            gpio_clear(gripper_relay_pin.port, gripper_relay_pin.pin);
     }
     return 0;
 }
