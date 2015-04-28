@@ -260,11 +260,7 @@ static void handle_msg(void)
     float setpoints[6];
     int i;
     char *msg = (char *)usart_buf;
-    /*
-    if (sscanf((const char *)usart_buf, "%f", &setpoints[0]) == 1) {
-        joints[0].setpoint = setpoints[0];
-    }
-    */
+
     if (sscanf((const char *) usart_buf, "%f, %f, %f, %f, %f, %f",
                &setpoints[0], &setpoints[1], &setpoints[2], &setpoints[3],
                &setpoints[4], &setpoints[5]) == 6) {
@@ -286,6 +282,7 @@ static void handle_msg(void)
     else if (!strncmp(msg, "debug", 5)) {
         debug();
     }
+
     response();
     new_message = 0;
     usart_msg_len = 0;
