@@ -6,6 +6,8 @@
 #include <libopencm3/cm3/nvic.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <math.h>
 #include "spinlock.h"
 #include "pid.h"
 
@@ -39,6 +41,7 @@ struct joint {
     struct pid_state pid_state;
     struct pid_params pid_params;
     float setpoint;
+    float adc_angle;
 };
 
 static struct joint joints[] = {
@@ -47,8 +50,8 @@ static struct joint joints[] = {
             .pwm = {.timer_peripheral = TIM4,
                     .oc_id = TIM_OC1,
                     .pin = {.port = GPIOD, .pin = GPIO12, .af = GPIO_AF2}
-            }, 
-            .dira = {.port = GPIOE, .pin = GPIO7}, 
+            },
+            .dira = {.port = GPIOE, .pin = GPIO7},
             .dirb = {.port = GPIOE, .pin = GPIO9}
         },
         .pot = {
@@ -66,10 +69,166 @@ static struct joint joints[] = {
             .d = 0.0f,
             .i_max = 0.01f
         },
-        .setpoint = 0.49f
+        .setpoint = 0.49f,
+        .adc_angle = NAN
+    },
+    { /* joint 2, joints[1] */
+        .motor = {
+            .pwm = {.timer_peripheral = TIM4,
+                    .oc_id = TIM_OC2,
+                    .pin = {.port = GPIOD, .pin = GPIO13, .af = GPIO_AF2}
+            },
+            .dira = {.port = GPIOE, .pin = GPIO11},
+            .dirb = {.port = GPIOE, .pin = GPIO13}
+        },
+        .pot = {
+            .adc = ADC1,
+            .channel = 2,
+            .pin = { .port = GPIOA, .pin = GPIO2 }
+        },
+        .pid_state = {
+            .prev_error = 0.0f,
+            .integral = 0.0f
+        },
+        .pid_params = {
+            .p = 10.0f,
+            .i = 20.0f,
+            .d = 0.0f,
+            .i_max = 0.01f
+        },
+        .setpoint = 0.49f,
+        .adc_angle = NAN
+    },
+    { /* joint 3, joints[2] */
+        .motor = {
+            .pwm = {.timer_peripheral = TIM4,
+                    .oc_id = TIM_OC4,
+                    .pin = {.port = GPIOD, .pin = GPIO15, .af = GPIO_AF2}
+            },
+            .dira = {.port = GPIOE, .pin = GPIO15},
+            .dirb = {.port = GPIOD, .pin = GPIO10}
+        },
+        .pot = {
+            .adc = ADC1,
+            .channel = 4,
+            .pin = { .port = GPIOA, .pin = GPIO4 }
+        },
+        .pid_state = {
+            .prev_error = 0.0f,
+            .integral = 0.0f
+        },
+        .pid_params = {
+            .p = 10.0f,
+            .i = 20.0f,
+            .d = 0.0f,
+            .i_max = 0.01f
+        },
+        .setpoint = 0.49f,
+        .adc_angle = NAN
+    },
+    { /* joint 4, joints[3] */
+        .motor = {
+            .pwm = {.timer_peripheral = TIM4,
+                    .oc_id = TIM_OC3,
+                    .pin = {.port = GPIOD, .pin = GPIO14, .af = GPIO_AF2}
+            },
+            .dira = {.port = GPIOE, .pin = GPIO10},
+            .dirb = {.port = GPIOE, .pin = GPIO12}
+        },
+        .pot = {
+            .adc = ADC1,
+            .channel = 6,
+            .pin = { .port = GPIOA, .pin = GPIO6 }
+        },
+        .pid_state = {
+            .prev_error = 0.0f,
+            .integral = 0.0f
+        },
+        .pid_params = {
+            .p = 10.0f,
+            .i = 20.0f,
+            .d = 0.0f,
+            .i_max = 0.01f
+        },
+        .setpoint = 0.49f,
+        .adc_angle = NAN
+    },
+    { /* joint 5, joints[4] */
+        .motor = {
+            .pwm = {.timer_peripheral = TIM3,
+                    .oc_id = TIM_OC3,
+                    .pin = {.port = GPIOC, .pin = GPIO8, .af = GPIO_AF2}
+            },
+            .dira = {.port = GPIOE, .pin = GPIO14},
+            .dirb = {.port = GPIOE, .pin = GPIO4}
+        },
+        .pot = {
+            .adc = ADC1,
+            .channel = 14,
+            .pin = { .port = GPIOC, .pin = GPIO4 }
+        },
+        .pid_state = {
+            .prev_error = 0.0f,
+            .integral = 0.0f
+        },
+        .pid_params = {
+            .p = 10.0f,
+            .i = 20.0f,
+            .d = 0.0f,
+            .i_max = 0.01f
+        },
+        .setpoint = 0.49f,
+        .adc_angle = NAN
+    },
+    { /* joint 6, joints[5] */
+        .motor = {
+            .pwm = {.timer_peripheral = TIM4,
+                    .oc_id = TIM_OC1,
+                    .pin = {.port = GPIOD, .pin = GPIO12, .af = GPIO_AF2}
+            },
+            .dira = {.port = GPIOE, .pin = GPIO7},
+            .dirb = {.port = GPIOE, .pin = GPIO9}
+        },
+        .pot = {
+            .adc = ADC1,
+            .channel = 0,
+            .pin = { .port = GPIOA, .pin = GPIO0 }
+        },
+        .pid_state = {
+            .prev_error = 0.0f,
+            .integral = 0.0f
+        },
+        .pid_params = {
+            .p = 10.0f,
+            .i = 20.0f,
+            .d = 0.0f,
+            .i_max = 0.01f
+        },
+        .setpoint = 0.49f,
+        .adc_angle = NAN
     }
 };
 
+volatile int safemode = 1;
+volatile int brake = 1;
+
+const struct pin brake_relay_pin = {
+    .port = GPIOD, .pin = GPIO1
+};
+
+const struct pin gripper_relay_pin = {
+    .port = GPIOD, .pin = GPIO0
+};
+
+static void brake_off(void)
+{
+    gpio_set(brake_relay_pin.port, brake_relay_pin.pin);
+}
+
+static void brake_on(void)
+{
+    gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);
+}
 
 #define USART_BUF_LEN 128 + 1
 
@@ -99,7 +258,6 @@ static void pot_input_init(struct pot pot)
     adc_disable_scan_mode(ADC1);
     adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_3CYC);
     adc_power_on(ADC1);
- 
 }
 
 static uint32_t timer_get_period(uint32_t timer_peripheral)
@@ -151,6 +309,15 @@ static void gpio_setup(void)
     gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
 }
 
+static void relay_setup(void)
+{
+    rcc_periph_clock_enable(RCC_GPIOD);
+    gpio_mode_setup(brake_relay_pin.port, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+                    brake_relay_pin.pin);
+    gpio_mode_setup(gripper_relay_pin.port, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+                    gripper_relay_pin.pin);
+}
+
 static void timer_setup(void)
 {
     rcc_periph_clock_enable(RCC_GPIOD); /* PWM */
@@ -168,6 +335,7 @@ static void adc_setup(void)
 {
     rcc_periph_clock_enable(RCC_ADC1);
     rcc_periph_clock_enable(RCC_GPIOA);
+    rcc_periph_clock_enable(RCC_GPIOC);
     gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
     adc_off(ADC1);
     adc_disable_scan_mode(ADC1);
@@ -212,7 +380,7 @@ static void set_motor(struct motor motor, float val)
 
 static void uart_setup(void)
 {
-    rcc_periph_clock_enable(RCC_GPIOD); 
+    rcc_periph_clock_enable(RCC_GPIOD);
     gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO8 | GPIO9);
     gpio_set_af(GPIOD, GPIO_AF7, GPIO8 | GPIO9);
     rcc_periph_clock_enable(RCC_USART3);
@@ -228,18 +396,60 @@ static void uart_setup(void)
 }
 
 
-#define DEBUG
+//#define DEBUG
 
 static void joint_control(struct joint *joint, float delta_t)
 {
     float measured = pot_input_read(joint->pot);
-    float output = pid(&joint->pid_state, joint->pid_params, measured,
-                       joint->setpoint, delta_t);
+    float output = 0;
+    if (!safemode)
+        output = pid(&joint->pid_state, joint->pid_params, measured,
+                     joint->setpoint, delta_t);
+    joint->adc_angle = measured;
     #ifdef DEBUG
-    printf("m: %f, s: %f, o: %f, i: %f\n\r", measured, joint->setpoint,
+    printf("m: %f, s: %f, o: %f, i: %f\r\n", measured, joint->setpoint,
             output, joint->pid_state.integral);
     #endif
     set_motor(joint->motor, output);
+}
+
+static void print_state(void)
+{
+    printf("%f, %f, %f, %f, %f, %f\n\r", joints[0].adc_angle,
+           joints[1].adc_angle, joints[2].adc_angle, joints[3].adc_angle,
+           joints[4].adc_angle, joints[5].adc_angle);
+}
+
+static void handle_msg(void)
+{
+    float setpoints[6];
+    int i;
+    /*
+    if (sscanf((const char *)usart_buf, "%f", &setpoints[0]) == 1) {
+        joints[0].setpoint = setpoints[0];
+    }
+    */
+    if (sscanf((const char *) usart_buf, "%f, %f, %f, %f, %f, %f",
+               &setpoints[0], &setpoints[1], &setpoints[2], &setpoints[3],
+               &setpoints[4], &setpoints[5]) == 6) {
+        for (i = 0; i < 6; ++i)
+            joints[i].setpoint = setpoints[i];
+    }
+    else if (!strncmp((const char *)usart_buf, "safeoff", 7)) {
+        safemode = 0;
+    }
+    else if (!strncmp((const char *)usart_buf, "safeon", 7)) {
+        safemode = 1;
+    }
+    else if (!strncmp((const char *)usart_buf, "brkoff", 6)) {
+        brake_off();
+    }
+    else if (!strncmp((const char *)usart_buf, "brkon", 5)) {
+        brake_on();
+    }
+    print_state();
+    new_message = 0;
+    usart_msg_len = 0;
 }
 
 int main(void)
@@ -251,6 +461,8 @@ int main(void)
     timer_setup();
     adc_setup();
     uart_setup();
+    relay_setup();
+
 
     for (i = 0; (unsigned)i < sizeof(joints)/sizeof(joints[0]); ++i)
         joint_init(joints[i]);
@@ -260,12 +472,11 @@ int main(void)
     while (1) {
         for (i = 0; i < 500000; i++)
             __asm__("nop");
-        joint_control(&joints[0], 500000.0f / 120000000.0f);
+         for (i = 0; i < 6; ++i)
+            joint_control(&joints[i], 500000.0f / 120000000.0f);
+        //gpio_toggle(brake_relay_pin.port, brake_relay_pin.pin);
         if (new_message) {
-            printf("\\o/\n\r");
-            sscanf((const char *)usart_buf, "%f", &joints[0].setpoint);
-            new_message = 0;
-            usart_msg_len = 0;
+            handle_msg();
         }
     }
 
