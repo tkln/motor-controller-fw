@@ -42,6 +42,7 @@ struct joint {
     struct pid_params pid_params;
     float setpoint;
     float adc_angle;
+    float output;
 };
 
 static struct joint joints[] = {
@@ -397,24 +398,30 @@ static void joint_control(struct joint *joint, float delta_t)
         output = pid(&joint->pid_state, joint->pid_params, measured,
                      joint->setpoint, delta_t);
     joint->adc_angle = measured;
-    #ifdef DEBUG
-    printf("m: %f, s: %f, o: %f, i: %f\r\n", measured, joint->setpoint,
-            output, joint->pid_state.integral);
-    #endif
     set_motor(joint->motor, output);
 }
 
-static void print_state(void)
+static void response(void)
 {
     printf("%f, %f, %f, %f, %f, %f\n\r", joints[0].adc_angle,
            joints[1].adc_angle, joints[2].adc_angle, joints[3].adc_angle,
            joints[4].adc_angle, joints[5].adc_angle);
 }
 
+static void debug(void)
+{
+    size_t i;
+    for (i = 0; i < sizeof(joints) / sizeof(joints[0]); ++i)
+        printf("m: %f, s: %f, o: %f, i: %f\r\n", joints[i].adc_angle,
+               joints[i].setpoint, joints[i].output,
+               joints[i].pid_state.integral);
+}
+
 static void handle_msg(void)
 {
     float setpoints[6];
     int i;
+    char *msg = (char *)usart_buf;
     /*
     if (sscanf((const char *)usart_buf, "%f", &setpoints[0]) == 1) {
         joints[0].setpoint = setpoints[0];
@@ -426,19 +433,22 @@ static void handle_msg(void)
         for (i = 0; i < 6; ++i)
             joints[i].setpoint = setpoints[i];
     }
-    else if (!strncmp((const char *)usart_buf, "safeoff", 7)) {
+    else if (!strncmp(msg, "safeoff", 7)) {
         safemode = 0;
     }
-    else if (!strncmp((const char *)usart_buf, "safeon", 7)) {
+    else if (!strncmp(msg, "safeon", 7)) {
         safemode = 1;
     }
-    else if (!strncmp((const char *)usart_buf, "brkoff", 6)) {
-        brake_off();
+    else if (!strncmp(msg, "brkoff", 6)) {
+        brake = 0;
     }
-    else if (!strncmp((const char *)usart_buf, "brkon", 5)) {
-        brake_on();
+    else if (!strncmp(msg, "brkon", 5)) {
+        brake = 1;
     }
-    print_state();
+    else if (!strncmp(msg, "debug", 5)) {
+        debug();
+    }
+    response();
     new_message = 0;
     usart_msg_len = 0;
 }
