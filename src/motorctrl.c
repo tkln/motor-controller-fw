@@ -190,19 +190,37 @@ static float pot_input_read(struct pot pot)
     return read_adc_simple(pot.adc, pot.channel);
 }
 
+static float gap(float val, float min, float max)
+{
+    if (val >= max)
+        return max;
+    if (val <= min)
+        return min;
+    return val;
+}
+
 static void set_motor(struct motor motor, float val)
 {
-    if (val >= 1.0f)
-        val = 0.99f;
-    if (-val <= -1.0f)
-        val = -0.99f;
+    val = gap(val, -0.99f, 0.99f);
+    if (isnan(val)) {
+        pwm_output_set(motor.pwm, 0); /* stop the fet gate pulse */
+        if (signbit(val)) { /* brake */
+            gpio_set(motor.dira.port, motor.dira.pin);
+            gpio_set(motor.dirb.port, motor.dirb.pin);
+        }
+        else { /* float */
+            gpio_set(motor.dira.port, motor.dira.pin);
+            gpio_set(motor.dirb.port, motor.dirb.pin);
+        }
+        return;
+    }
     if (val > 0.0f) {
         pwm_output_set(motor.pwm, 1 - val);
         gpio_set(motor.dira.port, motor.dira.pin);
         gpio_clear(motor.dirb.port, motor.dirb.pin);
     }
     else {
-        pwm_output_set(motor.pwm, 1 - (-val));
+        pwm_output_set(motor.pwm, 1 + val);
         gpio_set(motor.dirb.port, motor.dirb.pin);
         gpio_clear(motor.dira.port, motor.dira.pin);
     }

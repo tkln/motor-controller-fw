@@ -19,7 +19,7 @@
 
 BINARY = motorctrl
 OBJS += ./spinlock.o ./retarget.o ./pid.o
-
+LDLIBS += -lm
 
 OPENCM3_DIR = ../libopencm3
 LDSCRIPT = $(OPENCM3_DIR)/lib/stm32/f4/stm32f405x6.ld
