@@ -220,15 +220,6 @@ const struct pin gripper_relay_pin = {
     .port = GPIOD, .pin = GPIO0
 };
 
-static void brake_off(void)
-{
-    gpio_set(brake_relay_pin.port, brake_relay_pin.pin);
-}
-
-static void brake_on(void)
-{
-    gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);
-}
 
 #define USART_BUF_LEN 128 + 1
 
@@ -472,13 +463,17 @@ int main(void)
     while (1) {
         for (i = 0; i < 500000; i++)
             __asm__("nop");
-         for (i = 0; i < 6; ++i)
-            joint_control(&joints[i], 500000.0f / 120000000.0f);
-        //gpio_toggle(brake_relay_pin.port, brake_relay_pin.pin);
-        if (new_message) {
-            handle_msg();
-        }
-    }
 
+        if (new_message)
+            handle_msg();
+
+        for (i = 0; i < 6; ++i)
+            joint_control(&joints[i], 500000.0f / 120000000.0f);
+
+        if (brake)
+            gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);
+        else
+            gpio_set(brake_relay_pin.port, brake_relay_pin.pin);
+    }
     return 0;
 }
