@@ -320,10 +320,21 @@ int main(void)
     relay_setup();
 
 
+    /*
     for (i = 0; (unsigned)i < sizeof(joints)/sizeof(joints[0]); ++i)
         joint_init(joints[i]);
+    */
+    /*
+    while (1) {
+        putc('a', stdout);
+        fflush(stdout);
+    }
+    */
 
-    printf("hullo\n\r");
+    //while (1) {
+        printf("hullo\n");
+     //   fflush(stdout);
+    //}
 
     while (1) {
         for (i = 0; i < 500000; i++)
