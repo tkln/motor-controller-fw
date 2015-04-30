@@ -74,7 +74,7 @@ void usart3_isr(void)
         usart_msg_len %= (USART_BUF_LEN - 1);
         data = usart_recv(USART3);
         usart_buf[usart_msg_len++] = data;
-        if (data == '\r') {
+        if (data == '\r' || data == '\n') {
             usart_buf[usart_msg_len] = '\0';
             new_message = 1;
         }
