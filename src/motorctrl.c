@@ -214,7 +214,7 @@ static float gap(float val, float min, float max)
 
 static void set_motor(struct motor motor, float val)
 {
-    val = gap(val, -0.99f, 0.99f);
+    val = gap(val, -0.40f, 0.40f);
     if (isnan(val)) {
         pwm_output_set(motor.pwm, 0); /* stop the fet gate pulse */
         if (signbit(val)) { /* brake */
