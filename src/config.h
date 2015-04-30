@@ -19,7 +19,7 @@ static struct joint joints[5] = {
             .integral = 0.0f
         },
         .pid_params = {
-            .p = 15.0f,
+            .p = 20.0f,
             .i = 0.0f,
             .d = 0.0f,
             .i_max = 0.01f
