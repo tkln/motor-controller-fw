@@ -152,13 +152,21 @@ static void timer_setup(void)
 {
     rcc_periph_clock_enable(RCC_GPIOD); /* PWM */
     rcc_periph_clock_enable(RCC_TIM4); /* PWM */
-    rcc_periph_clock_enable(RCC_TIM4);
     timer_reset(TIM4);
     timer_set_mode(TIM4, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
                    TIM_CR1_DIR_UP);
     timer_enable_break_main_output(TIM4);
     timer_set_period(TIM4, 3000);
     timer_enable_counter(TIM4);
+
+    rcc_periph_clock_enable(RCC_GPIOC); /* PWM */
+    rcc_periph_clock_enable(RCC_TIM3); /* PWM */
+    timer_reset(TIM3);
+    timer_set_mode(TIM3, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
+                   TIM_CR1_DIR_UP);
+    timer_enable_break_main_output(TIM3);
+    timer_set_period(TIM3, 3000);
+    timer_enable_counter(TIM3);
 }
 
 static void adc_setup(void)
@@ -320,10 +328,8 @@ int main(void)
     relay_setup();
 
 
-    /*
     for (i = 0; (unsigned)i < sizeof(joints)/sizeof(joints[0]); ++i)
         joint_init(joints[i]);
-    */
     /*
     while (1) {
         putc('a', stdout);
