@@ -399,16 +399,17 @@ int main(void)
         printf("hullo\n");
      //   fflush(stdout);
     //}
-
+    const int delay = 50000;
+    ctrl_delay = 11;
     while (1) {
-        for (i = 0; i < 500000; i++)
+        for (i = 0; i < delay; i++)
             __asm__("nop");
 
         if (new_message)
             handle_msg();
 
         for (i = 0; i < 6; ++i)
-            joint_control(&joints[i], 500000.0f / 120000000.0f);
+            joint_control(&joints[i], delay / 120000000.0f);
 
         if (brake)
             gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);
@@ -418,6 +419,9 @@ int main(void)
             gpio_set(gripper_relay_pin.port, gripper_relay_pin.pin);
         else
             gpio_clear(gripper_relay_pin.port, gripper_relay_pin.pin);
+
+        if (ctrl_delay-- == 0)
+            ctrl_delay = 11;
     }
     return 0;
 }
