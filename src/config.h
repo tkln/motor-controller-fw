@@ -1,4 +1,5 @@
-static struct joint joints[] = {
+#define JOINT_COUNT 5
+static struct joint joints[5] = {
     { /* joint 1, joints[0] */
         .motor = {
             .pwm = {.timer_peripheral = TIM4,
@@ -134,6 +135,7 @@ static struct joint joints[] = {
         .setpoint = 0.49f,
         .adc_angle = NAN
     },
+    #if 0
     { /* joint 6, joints[5] */
         .motor = {
             .pwm = {.timer_peripheral = TIM4,
@@ -161,6 +163,7 @@ static struct joint joints[] = {
         .setpoint = 0.49f,
         .adc_angle = NAN
     }
+    #endif
 };
 
 

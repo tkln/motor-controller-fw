@@ -326,13 +326,13 @@ static void response(void)
 {
     printf(state_msg_format, joints[0].adc_angle, joints[1].adc_angle,
            joints[2].adc_angle, joints[3].adc_angle, joints[4].adc_angle,
-           joints[5].adc_angle, safemode, brake, gripper);
+           joints[0].adc_angle, safemode, brake, gripper);
 }
 
 static void debug(void)
 {
     size_t i;
-    for (i = 0; i < sizeof(joints) / sizeof(joints[0]); ++i)
+    for (i = 0; i < JOINT_COUNT; ++i)
         printf("m: %f, s: %f, o: %f, i: %f\r\n", joints[i].adc_angle,
                joints[i].setpoint, joints[i].output,
                joints[i].pid_state.integral);
@@ -341,13 +341,13 @@ static void debug(void)
 static void set_setpoints(float *setpoints)
 {
     size_t i;
-    for (i = 0; i < sizeof(joints) / sizeof(joints[0]); ++i)
+    for (i = 0; i < JOINT_COUNT; ++i)
         joints[i].setpoint = setpoints[i];
 }
 
 static void handle_msg(void)
 {
-    float setpoints[sizeof(joints) / sizeof(joints[0])];
+    float setpoints[JOINT_COUNT];
     int ret;
     int new_safemode = 1, new_brake = 1, new_gripper = 1;
     char *msg = (char *)usart_buf;
@@ -386,7 +386,7 @@ int main(void)
     relay_setup();
 
 
-    for (i = 0; (unsigned)i < sizeof(joints)/sizeof(joints[0]); ++i)
+    for (i = 0; (unsigned)i < JOINT_COUNT; ++i)
         joint_init(joints[i]);
     /*
     while (1) {
@@ -408,7 +408,7 @@ int main(void)
         if (new_message)
             handle_msg();
 
-        for (i = 0; i < 6; ++i)
+        for (i = 0; i < JOINT_COUNT; ++i)
             joint_control(&joints[i], delay / 120000000.0f);
 
         if (brake)
