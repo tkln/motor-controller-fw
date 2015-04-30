@@ -300,8 +300,8 @@ static void handle_msg(void)
 
     if (ret == 9) {
         set_setpoints(setpoints);
-        safemode = new_safemode;
         brake = new_brake;
+        safemode = new_safemode;
         gripper = new_gripper;
     }
     else if(!strncmp(msg, "debug", 5)) {
