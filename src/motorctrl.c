@@ -161,7 +161,7 @@ static void timer_setup(void)
     timer_set_mode(TIM4, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
                    TIM_CR1_DIR_UP);
     timer_enable_break_main_output(TIM4);
-    timer_set_period(TIM4, 3000);
+    timer_set_period(TIM4, 6000);
     timer_enable_counter(TIM4);
 
     rcc_periph_clock_enable(RCC_GPIOC); /* PWM */
@@ -170,7 +170,7 @@ static void timer_setup(void)
     timer_set_mode(TIM3, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
                    TIM_CR1_DIR_UP);
     timer_enable_break_main_output(TIM3);
-    timer_set_period(TIM3, 3000);
+    timer_set_period(TIM3, 6000);
     timer_enable_counter(TIM3);
 }
 
