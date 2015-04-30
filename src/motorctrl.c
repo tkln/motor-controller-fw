@@ -35,6 +35,8 @@ struct pot {
     struct pin pin;
 };
 
+#define FILTER_BUF_SIZE 11
+
 struct joint {
     const struct motor motor;
     const struct pot pot;
@@ -43,6 +45,7 @@ struct joint {
     float setpoint;
     float adc_angle;
     float output;
+    float prev_adc[FILTER_BUF_SIZE];
 };
 
 #include "config.h"
@@ -251,12 +254,47 @@ static void uart_setup(void)
     usart_enable_rx_interrupt(USART3);
 }
 
+static inline void swap(float *a, float *b)
+{
+    float tmp;
+    tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+static inline void sort(float *buf, size_t len)
+{
+    int sorted = 0;
+    size_t i;
+    while (!sorted) {
+        sorted = 1;
+        for (i = 0; i < len - 1; ++i) {
+            if (buf[i] > buf[i + 1]) {
+                sorted = 0;
+                swap(buf + i, buf + i + 1);
+            }
+        }
+    }
+}
+
+static float filter(struct joint *joint, float input)
+{
+    float filter_buf[FILTER_BUF_SIZE];
+    memmove(joint->prev_adc, joint->prev_adc + 1, (FILTER_BUF_SIZE - 1) *
+                                                  sizeof(float));
+    joint->prev_adc[FILTER_BUF_SIZE - 1] = input;
+    memcpy(filter_buf, joint->prev_adc, FILTER_BUF_SIZE * sizeof(float));
+    sort(filter_buf, FILTER_BUF_SIZE);
+    return filter_buf[FILTER_BUF_SIZE / 2];
+}
+
 static void joint_control(struct joint *joint, float delta_t)
 {
     float measured = pot_input_read(joint->pot);
     float output = 0;
-    if (!safemode)
-        output = pid(&joint->pid_state, joint->pid_params, measured,
+    float filtered = filter(joint, measured);
+    if (!safemode && !brake)
+        output = pid(&joint->pid_state, joint->pid_params, filtered,
                      joint->setpoint, delta_t);
     joint->adc_angle = measured;
     set_motor(joint->motor, output);
