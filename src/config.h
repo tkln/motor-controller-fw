@@ -45,8 +45,8 @@ static struct joint joints[] = {
             .integral = 0.0f
         },
         .pid_params = {
-            .p = 15.0f,
-            .i = 10.0f,
+            .p = 20.0f,
+            .i = 5.0f,
             .d = 0.0f,
             .i_max = 0.01f
         },
@@ -72,8 +72,8 @@ static struct joint joints[] = {
             .integral = 0.0f
         },
         .pid_params = {
-            .p = 15.0f,
-            .i = 0.0f,
+            .p = 20.0f,
+            .i = 10.0f,
             .d = 0.0f,
             .i_max = 0.01f
         },
@@ -100,7 +100,7 @@ static struct joint joints[] = {
         },
         .pid_params = {
             .p = 15.0f,
-            .i = 0.0f,
+            .i = 10.0f,
             .d = 0.0f,
             .i_max = 0.01f
         },
@@ -127,7 +127,7 @@ static struct joint joints[] = {
         },
         .pid_params = {
             .p = 15.0f,
-            .i = 0.0f,
+            .i = 10.0f,
             .d = 0.0f,
             .i_max = 0.01f
         },
@@ -153,7 +153,7 @@ static struct joint joints[] = {
             .integral = 0.0f
         },
         .pid_params = {
-            .p = 15.0f,
+            .p = 30.0f,
             .i = 0.0f,
             .d = 0.0f,
             .i_max = 0.01f
