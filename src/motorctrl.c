@@ -254,7 +254,7 @@ static void joint_control(struct joint *joint, float delta_t)
     set_motor(joint->motor, output);
 }
 
-const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper %i\n";
+const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
 
 static void response(void)
 {
