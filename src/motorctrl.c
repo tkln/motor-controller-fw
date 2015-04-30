@@ -35,7 +35,8 @@ struct pot {
     struct pin pin;
 };
 
-#define FILTER_BUF_SIZE 11
+#define FILTER_BUF_SIZE 7
+#define AVG_BUF_SIZE 7
 
 struct joint {
     const struct motor motor;
@@ -46,6 +47,7 @@ struct joint {
     float adc_angle;
     float output;
     float prev_adc[FILTER_BUF_SIZE];
+    float avg_buf[AVG_BUF_SIZE];
 };
 
 #include "config.h"
@@ -277,7 +279,7 @@ static inline void sort(float *buf, size_t len)
     }
 }
 
-static float filter(struct joint *joint, float input)
+static float median_filter(struct joint *joint, float input)
 {
     float filter_buf[FILTER_BUF_SIZE];
     memmove(joint->prev_adc, joint->prev_adc + 1, (FILTER_BUF_SIZE - 1) *
@@ -288,16 +290,34 @@ static float filter(struct joint *joint, float input)
     return filter_buf[FILTER_BUF_SIZE / 2];
 }
 
+static float avg_filter(struct joint *joint, float input)
+{
+    float filter_buf[AVG_BUF_SIZE];
+    memmove(joint->avg_buf, joint->avg_buf + 1, (AVG_BUF_SIZE - 1) *
+                                                  sizeof(float));
+    joint->avg_buf[AVG_BUF_SIZE - 1] = input;
+    memcpy(filter_buf, joint->avg_buf, AVG_BUF_SIZE * sizeof(float));
+    float sum = 0.0f;
+    size_t i;
+    for (i = 0; i < AVG_BUF_SIZE; ++i)
+        sum += filter_buf[i];
+    return sum / AVG_BUF_SIZE;
+}
+
+static int ctrl_delay;
 static void joint_control(struct joint *joint, float delta_t)
 {
     float measured = pot_input_read(joint->pot);
     float output = 0;
-    float filtered = filter(joint, measured);
-    if (!safemode && !brake)
+    float filtered = median_filter(joint, measured);
+    filtered = avg_filter(joint, filtered);
+    if (!safemode && !brake && ctrl_delay == 0) {
         output = pid(&joint->pid_state, joint->pid_params, filtered,
-                     joint->setpoint, delta_t);
+                joint->setpoint, delta_t);
+        joint->output = output;
+        set_motor(joint->motor, output);
+    }
     joint->adc_angle = measured;
-    set_motor(joint->motor, output);
 }
 
 const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
