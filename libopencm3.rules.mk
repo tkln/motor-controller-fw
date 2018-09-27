@@ -105,6 +105,7 @@ LDFLAGS		+= -L$(LIB_DIR)
 LDFLAGS		+= -T$(LDSCRIPT)
 LDFLAGS		+= -Wl,-Map=$(*).map
 LDFLAGS		+= -Wl,--gc-sections
+LDFLAGS		+= -nostdlib -L /usr/arm-none-eabi/lib/fpu
 ifeq ($(V),99)
 LDFLAGS		+= -Wl,--print-gc-sections
 endif
