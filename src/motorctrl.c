@@ -378,7 +378,7 @@ static void handle_msg(void)
 
 int main(void)
 {
-    int i;
+    unsigned i;
 
     clock_setup();
     gpio_setup();
@@ -401,7 +401,7 @@ int main(void)
         printf("hullo\n");
      //   fflush(stdout);
     //}
-    const int delay = 50000;
+    const unsigned delay = 50000;
     ctrl_delay = 11;
     while (1) {
         for (i = 0; i < delay; i++)
