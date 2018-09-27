@@ -373,6 +373,7 @@ static void handle_msg(void)
 int main(void)
 {
     unsigned i;
+    const unsigned delay = 50000;
 
     clock_setup();
     gpio_setup();
@@ -384,18 +385,9 @@ int main(void)
 
     for (i = 0; i < ARRAY_LEN(joints); ++i)
         joint_init(joints[i]);
-    /*
-    while (1) {
-        putc('a', stdout);
-        fflush(stdout);
-    }
-    */
 
-    //while (1) {
-        printf("hullo\n");
-     //   fflush(stdout);
-    //}
-    const unsigned delay = 50000;
+    printf("boot\n");
+
     ctrl_delay = 11;
     while (1) {
         for (i = 0; i < delay; i++)
