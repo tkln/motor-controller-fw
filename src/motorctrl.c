@@ -27,8 +27,7 @@ struct pwm_output {
 
 struct motor {
     struct pwm_output pwm;
-    struct pin dira;
-    struct pin dirb;
+    struct pin dir;
 };
 
 struct pot {
@@ -118,8 +117,7 @@ static void motor_dir_pin_init(struct pin pin)
 static void motor_init(struct motor motor)
 {
     pwm_output_init(motor.pwm);
-    motor_dir_pin_init(motor.dira);
-    motor_dir_pin_init(motor.dirb);
+    motor_dir_pin_init(motor.dir);
 }
 
 static void joint_init(struct joint joint)
@@ -220,24 +218,20 @@ static void set_motor(struct motor motor, float val)
     if (isnan(val)) {
         pwm_output_set(motor.pwm, 0); /* stop the fet gate pulse */
         if (signbit(val)) { /* brake */
-            gpio_set(motor.dira.port, motor.dira.pin);
-            gpio_set(motor.dirb.port, motor.dirb.pin);
+            gpio_set(motor.dir.port, motor.dir.pin);
         }
         else { /* float */
-            gpio_set(motor.dira.port, motor.dira.pin);
-            gpio_set(motor.dirb.port, motor.dirb.pin);
+            gpio_set(motor.dir.port, motor.dir.pin);
         }
         return;
     }
     if (val > 0.0f) {
         pwm_output_set(motor.pwm, 1 - val);
-        gpio_set(motor.dira.port, motor.dira.pin);
-        gpio_clear(motor.dirb.port, motor.dirb.pin);
+        gpio_set(motor.dir.port, motor.dir.pin);
     }
     else {
         pwm_output_set(motor.pwm, 1 + val);
-        gpio_set(motor.dirb.port, motor.dirb.pin);
-        gpio_clear(motor.dira.port, motor.dira.pin);
+        gpio_clear(motor.dir.port, motor.dir.pin);
     }
 }
 

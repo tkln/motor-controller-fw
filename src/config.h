@@ -5,8 +5,7 @@ static struct joint joints[5] = {
                     .oc_id = TIM_OC1,
                     .pin = {.port = GPIOD, .pin = GPIO12, .af = GPIO_AF2}
             },
-            .dira = {.port = GPIOE, .pin = GPIO7},
-            .dirb = {.port = GPIOE, .pin = GPIO9}
+            .dir = {.port = GPIOE, .pin = GPIO7},
         },
         .pot = {
             .adc = ADC1,
@@ -32,8 +31,7 @@ static struct joint joints[5] = {
                     .oc_id = TIM_OC2,
                     .pin = {.port = GPIOD, .pin = GPIO13, .af = GPIO_AF2}
             },
-            .dira = {.port = GPIOE, .pin = GPIO11},
-            .dirb = {.port = GPIOE, .pin = GPIO13}
+            .dir = {.port = GPIOE, .pin = GPIO11},
         },
         .pot = {
             .adc = ADC1,
@@ -59,8 +57,7 @@ static struct joint joints[5] = {
                     .oc_id = TIM_OC4,
                     .pin = {.port = GPIOD, .pin = GPIO15, .af = GPIO_AF2}
             },
-            .dira = {.port = GPIOE, .pin = GPIO15},
-            .dirb = {.port = GPIOD, .pin = GPIO10}
+            .dir = {.port = GPIOE, .pin = GPIO15},
         },
         .pot = {
             .adc = ADC1,
@@ -86,8 +83,7 @@ static struct joint joints[5] = {
                     .oc_id = TIM_OC3,
                     .pin = {.port = GPIOD, .pin = GPIO14, .af = GPIO_AF2}
             },
-            .dira = {.port = GPIOE, .pin = GPIO10},
-            .dirb = {.port = GPIOE, .pin = GPIO12}
+            .dir = {.port = GPIOE, .pin = GPIO10},
         },
         .pot = {
             .adc = ADC1,
@@ -113,8 +109,7 @@ static struct joint joints[5] = {
                     .oc_id = TIM_OC3,
                     .pin = {.port = GPIOC, .pin = GPIO8, .af = GPIO_AF2}
             },
-            .dira = {.port = GPIOE, .pin = GPIO14},
-            .dirb = {.port = GPIOE, .pin = GPIO4}
+            .dir = {.port = GPIOE, .pin = GPIO14},
         },
         .pot = {
             .adc = ADC1,
@@ -141,8 +136,7 @@ static struct joint joints[5] = {
                     .oc_id = TIM_OC1,
                     .pin = {.port = GPIOD, .pin = GPIO12, .af = GPIO_AF2}
             },
-            .dira = {.port = GPIOE, .pin = GPIO7},
-            .dirb = {.port = GPIOE, .pin = GPIO9}
+            .dir = {.port = GPIOE, .pin = GPIO7},
         },
         .pot = {
             .adc = ADC1,
