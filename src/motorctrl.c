@@ -89,7 +89,7 @@ void usart3_isr(void)
 static void pot_input_init(struct pot pot)
 {
     gpio_mode_setup(pot.pin.port, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, pot.pin.pin);
-    adc_off(ADC1);
+    adc_power_off(ADC1);
     adc_disable_scan_mode(ADC1);
     adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_3CYC);
     adc_power_on(ADC1);
@@ -134,7 +134,7 @@ static void pwm_output_set(struct pwm_output output, float val)
 
 static void clock_setup(void)
 {
-    rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_120MHZ]);
+    rcc_clock_setup_hse_3v3(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_120MHZ]);
 }
 
 static void gpio_setup(void)
@@ -157,7 +157,7 @@ static void timer_setup(void)
 {
     rcc_periph_clock_enable(RCC_GPIOD); /* PWM */
     rcc_periph_clock_enable(RCC_TIM4); /* PWM */
-    timer_reset(TIM4);
+    rcc_periph_reset_pulse(RST_TIM4);
     timer_set_mode(TIM4, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
                    TIM_CR1_DIR_UP);
     timer_enable_break_main_output(TIM4);
@@ -166,7 +166,7 @@ static void timer_setup(void)
 
     rcc_periph_clock_enable(RCC_GPIOC); /* PWM */
     rcc_periph_clock_enable(RCC_TIM3); /* PWM */
-    timer_reset(TIM3);
+    rcc_periph_reset_pulse(RST_TIM3);
     timer_set_mode(TIM3, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
                    TIM_CR1_DIR_UP);
     timer_enable_break_main_output(TIM3);
@@ -180,7 +180,7 @@ static void adc_setup(void)
     rcc_periph_clock_enable(RCC_GPIOA);
     rcc_periph_clock_enable(RCC_GPIOC);
     gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
-    adc_off(ADC1);
+    adc_power_off(ADC1);
     adc_disable_scan_mode(ADC1);
     adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_3CYC);
     adc_power_on(ADC1);
