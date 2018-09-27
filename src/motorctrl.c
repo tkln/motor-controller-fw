@@ -203,7 +203,7 @@ static float pot_input_read(struct pot pot)
     return read_adc_simple(pot.adc, pot.channel);
 }
 
-static float gap(float val, float min, float max)
+static float clamp(float val, float min, float max)
 {
     if (val >= max)
         return max;
@@ -214,7 +214,7 @@ static float gap(float val, float min, float max)
 
 static void set_motor(struct motor motor, float val)
 {
-    val = gap(val, -0.40f, 0.40f);
+    val = clamp(val, -0.40f, 0.40f);
     if (isnan(val)) {
         pwm_output_set(motor.pwm, 0); /* stop the fet gate pulse */
         if (signbit(val)) { /* brake */
