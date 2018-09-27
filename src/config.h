@@ -1,4 +1,3 @@
-#define JOINT_COUNT 5
 static struct joint joints[5] = {
     { /* joint 1, joints[0] */
         .motor = {

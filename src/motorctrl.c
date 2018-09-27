@@ -11,6 +11,8 @@
 #include "spinlock.h"
 #include "pid.h"
 
+#define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))
+
 struct pin {
     uint32_t port;
     uint16_t pin;
@@ -332,7 +334,7 @@ static void response(void)
 static void debug(void)
 {
     size_t i;
-    for (i = 0; i < JOINT_COUNT; ++i)
+    for (i = 0; i < ARRAY_LEN(joints); ++i)
         printf("m: %f, s: %f, o: %f, i: %f\r\n", joints[i].adc_angle,
                joints[i].setpoint, joints[i].output,
                joints[i].pid_state.integral);
@@ -341,13 +343,13 @@ static void debug(void)
 static void set_setpoints(float *setpoints)
 {
     size_t i;
-    for (i = 0; i < JOINT_COUNT; ++i)
+    for (i = 0; i < ARRAY_LEN(joints); ++i)
         joints[i].setpoint = setpoints[i];
 }
 
 static void handle_msg(void)
 {
-    float setpoints[JOINT_COUNT];
+    float setpoints[ARRAY_LEN(joints)];
     int ret;
     int new_safemode = 1, new_brake = 1, new_gripper = 1;
     char *msg = (char *)usart_buf;
@@ -386,7 +388,7 @@ int main(void)
     relay_setup();
 
 
-    for (i = 0; (unsigned)i < JOINT_COUNT; ++i)
+    for (i = 0; i < ARRAY_LEN(joints); ++i)
         joint_init(joints[i]);
     /*
     while (1) {
@@ -408,7 +410,7 @@ int main(void)
         if (new_message)
             handle_msg();
 
-        for (i = 0; i < JOINT_COUNT; ++i)
+        for (i = 0; i < ARRAY_LEN(joints); ++i)
             joint_control(&joints[i], delay / 120000000.0f);
 
         if (brake)
