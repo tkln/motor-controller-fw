@@ -4,8 +4,11 @@ int _write(int fd, char *ptr, int len)
 {
     int i;
     (void) fd;
-    for (i = 0; i < len; ++i)
+    for (i = 0; i < len; ++i) {
+        if (ptr[i] == '\n')
+            usart_send_blocking(USART3, '\r');
         usart_send_blocking(USART3, ptr[i]);
+    }
     return i;
 }
 

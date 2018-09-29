@@ -58,11 +58,15 @@ volatile int brake = 1;
 volatile int gripper = 0;
 
 const struct pin brake_relay_pin = {
-    .port = GPIOD, .pin = GPIO1
+    .port = GPIOE, .pin = GPIO4
 };
 
 const struct pin gripper_relay_pin = {
-    .port = GPIOD, .pin = GPIO0
+    .port = GPIOE, .pin = GPIO6
+};
+
+const struct pin motor_enable_pin = {
+    .port = GPIOE, .pin = GPIO5
 };
 
 
@@ -151,10 +155,21 @@ static void relay_setup(void)
                     brake_relay_pin.pin);
     gpio_mode_setup(gripper_relay_pin.port, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
                     gripper_relay_pin.pin);
+    gpio_mode_setup(motor_enable_pin.port, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+                    motor_enable_pin.pin);
 }
 
 static void timer_setup(void)
 {
+    rcc_periph_clock_enable(RCC_GPIOA); /* PWM */
+    rcc_periph_clock_enable(RCC_TIM1); /* PWM */
+    rcc_periph_reset_pulse(RST_TIM1);
+    timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
+                   TIM_CR1_DIR_UP);
+    timer_enable_break_main_output(TIM1);
+    timer_set_period(TIM1, 6000);
+    timer_enable_counter(TIM1);
+
     rcc_periph_clock_enable(RCC_GPIOD); /* PWM */
     rcc_periph_clock_enable(RCC_TIM4); /* PWM */
     rcc_periph_reset_pulse(RST_TIM4);
@@ -165,6 +180,7 @@ static void timer_setup(void)
     timer_enable_counter(TIM4);
 
     rcc_periph_clock_enable(RCC_GPIOC); /* PWM */
+    rcc_periph_clock_enable(RCC_GPIOB); /* PWM */
     rcc_periph_clock_enable(RCC_TIM3); /* PWM */
     rcc_periph_reset_pulse(RST_TIM3);
     timer_set_mode(TIM3, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE,
@@ -214,6 +230,8 @@ static float clamp(float val, float min, float max)
 
 static void set_motor(struct motor motor, float val)
 {
+    val = -val;
+
     val = clamp(val, -0.40f, 0.40f);
     if (isnan(val)) {
         pwm_output_set(motor.pwm, 0); /* stop the fet gate pulse */
@@ -225,14 +243,13 @@ static void set_motor(struct motor motor, float val)
         }
         return;
     }
-    if (val > 0.0f) {
-        pwm_output_set(motor.pwm, 1 - val);
-        gpio_set(motor.dir.port, motor.dir.pin);
-    }
-    else {
-        pwm_output_set(motor.pwm, 1 + val);
+    if (val < 0.0f) {
         gpio_clear(motor.dir.port, motor.dir.pin);
     }
+    else {
+        gpio_set(motor.dir.port, motor.dir.pin);
+    }
+    pwm_output_set(motor.pwm, fabs(val));
 }
 
 static void uart_setup(void)
@@ -312,7 +329,10 @@ static void joint_control(struct joint *joint, float delta_t)
                 joint->setpoint, delta_t);
         joint->output = output;
         set_motor(joint->motor, output);
+    } else {
+        //set_motor(joint->motor, 0.0f);
     }
+
     joint->adc_angle = measured;
 }
 
@@ -322,7 +342,7 @@ static void response(void)
 {
     printf(state_msg_format, joints[0].adc_angle, joints[1].adc_angle,
            joints[2].adc_angle, joints[3].adc_angle, joints[4].adc_angle,
-           joints[0].adc_angle, safemode, brake, gripper);
+           joints[5].adc_angle, safemode, brake, gripper);
 }
 
 static void debug(void)
@@ -388,7 +408,7 @@ int main(void)
 
     printf("boot\n");
 
-    ctrl_delay = 11;
+    ctrl_delay = 0;
     while (1) {
         for (i = 0; i < delay; i++)
             __asm__("nop");
@@ -396,6 +416,7 @@ int main(void)
         if (new_message)
             handle_msg();
 
+        gpio_toggle(GPIOD, GPIO12);
         for (i = 0; i < ARRAY_LEN(joints); ++i)
             joint_control(&joints[i], delay / 120000000.0f);
 
@@ -403,10 +424,21 @@ int main(void)
             gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);
         else
             gpio_set(brake_relay_pin.port, brake_relay_pin.pin);
+
         if (!gripper)
             gpio_set(gripper_relay_pin.port, gripper_relay_pin.pin);
         else
             gpio_clear(gripper_relay_pin.port, gripper_relay_pin.pin);
+
+        if (brake || safemode)
+            gpio_clear(motor_enable_pin.port, motor_enable_pin.pin);
+        else
+            gpio_set(motor_enable_pin.port, motor_enable_pin.pin);
+
+        if (!brake) {
+            printf("j6: e: %f, a: %f\n", joints[5].pid_state.prev_error,
+                                         joints[5].adc_angle);
+        }
 
         if (ctrl_delay-- == 0)
             ctrl_delay = 11;
