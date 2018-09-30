@@ -232,7 +232,7 @@ static void set_motor(struct motor motor, float val)
 {
     val = -val;
 
-    val = clamp(val, -0.40f, 0.40f);
+    val = clamp(val, -1.00f, 1.00f);
     if (isnan(val)) {
         pwm_output_set(motor.pwm, 0); /* stop the fet gate pulse */
         if (signbit(val)) { /* brake */
