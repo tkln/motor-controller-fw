@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include "spinlock.h"
+
 #include "pid.h"
 
 #define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))

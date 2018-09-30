@@ -18,7 +18,7 @@
 ##
 
 BINARY = motorctrl
-OBJS += ./spinlock.o ./retarget.o ./pid.o
+OBJS += ./retarget.o ./pid.o
 LDLIBS += -lm
 
 OPENCM3_DIR = ../libopencm3
