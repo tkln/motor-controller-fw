@@ -317,14 +317,13 @@ static float avg_filter(struct joint *joint, float input)
     return sum / AVG_BUF_SIZE;
 }
 
-static int ctrl_delay;
 static void joint_control(struct joint *joint, float delta_t)
 {
     float measured = pot_input_read(joint->pot);
     float output = 0;
     float filtered = median_filter(joint, measured);
     filtered = avg_filter(joint, filtered);
-    if (!safemode && !brake && ctrl_delay == 0) {
+    if (!safemode && !brake) {
         output = pid(&joint->pid_state, joint->pid_params, filtered,
                 joint->setpoint, delta_t);
         joint->output = output;
@@ -408,7 +407,6 @@ int main(void)
 
     printf("boot\n");
 
-    ctrl_delay = 0;
     while (1) {
         for (i = 0; i < delay; i++)
             __asm__("nop");
@@ -434,9 +432,6 @@ int main(void)
             gpio_clear(motor_enable_pin.port, motor_enable_pin.pin);
         else
             gpio_set(motor_enable_pin.port, motor_enable_pin.pin);
-
-        if (ctrl_delay-- == 0)
-            ctrl_delay = 11;
     }
     return 0;
 }
