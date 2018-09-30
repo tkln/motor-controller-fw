@@ -435,11 +435,6 @@ int main(void)
         else
             gpio_set(motor_enable_pin.port, motor_enable_pin.pin);
 
-        if (!brake) {
-            printf("j6: e: %f, a: %f\n", joints[5].pid_state.prev_error,
-                                         joints[5].adc_angle);
-        }
-
         if (ctrl_delay-- == 0)
             ctrl_delay = 11;
     }
