@@ -235,20 +235,18 @@ static void set_motor(struct motor motor, float val)
     val = clamp(val, -1.00f, 1.00f);
     if (isnan(val)) {
         pwm_output_set(motor.pwm, 0); /* stop the fet gate pulse */
-        if (signbit(val)) { /* brake */
+        if (signbit(val)) /* brake */
             gpio_set(motor.dir.port, motor.dir.pin);
-        }
-        else { /* float */
+        else /* float */
             gpio_set(motor.dir.port, motor.dir.pin);
-        }
         return;
     }
-    if (val < 0.0f) {
+
+    if (val < 0.0f)
         gpio_clear(motor.dir.port, motor.dir.pin);
-    }
-    else {
+    else
         gpio_set(motor.dir.port, motor.dir.pin);
-    }
+
     pwm_output_set(motor.pwm, fabs(val));
 }
 
@@ -320,16 +318,15 @@ static float avg_filter(struct joint *joint, float input)
 static void joint_control(struct joint *joint, float delta_t)
 {
     float measured = pot_input_read(joint->pot);
-    float output = 0;
     float filtered = median_filter(joint, measured);
+    float output = 0;
+
     filtered = avg_filter(joint, filtered);
     if (!safemode && !brake) {
         output = pid(&joint->pid_state, joint->pid_params, filtered,
                 joint->setpoint, delta_t);
         joint->output = output;
         set_motor(joint->motor, output);
-    } else {
-        //set_motor(joint->motor, 0.0f);
     }
 
     joint->adc_angle = measured;
@@ -376,11 +373,9 @@ static void handle_msg(void)
         brake = new_brake;
         safemode = new_safemode;
         gripper = new_gripper;
-    }
-    else if(!strncmp(msg, "debug", 5)) {
+    } else if (!strncmp(msg, "debug", 5)) {
         debug();
-    }
-    else {
+    } else {
         printf("invalid command\n");
     }
 
@@ -400,7 +395,6 @@ int main(void)
     adc_setup();
     uart_setup();
     relay_setup();
-
 
     for (i = 0; i < ARRAY_LEN(joints); ++i)
         joint_init(joints[i]);
