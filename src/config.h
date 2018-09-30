@@ -12,6 +12,11 @@ static struct joint joints[] = {
             .channel = 11,
             .pin = { .port = GPIOC, .pin = GPIO1 }
         },
+        .cur = {
+            .adc = ADC1,
+            .channel = 12,
+            .pin = { .port = GPIOC, .pin = GPIO2 }
+        },
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
@@ -37,6 +42,11 @@ static struct joint joints[] = {
             .adc = ADC1,
             .channel = 1,
             .pin = { .port = GPIOA, .pin = GPIO1 }
+        },
+        .cur = {
+            .adc = ADC1,
+            .channel = 0,
+            .pin = { .port = GPIOA, .pin = GPIO0 }
         },
         .pid_state = {
             .prev_error = 0.0f,
@@ -64,6 +74,11 @@ static struct joint joints[] = {
             .channel = 3,
             .pin = { .port = GPIOA, .pin = GPIO3 }
         },
+        .cur = {
+            .adc = ADC1,
+            .channel = 2,
+            .pin = { .port = GPIOA, .pin = GPIO2 }
+        },
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
@@ -89,6 +104,11 @@ static struct joint joints[] = {
             .adc = ADC1,
             .channel = 5,
             .pin = { .port = GPIOA, .pin = GPIO5 }
+        },
+        .cur = {
+            .adc = ADC1,
+            .channel = 8,
+            .pin = { .port = GPIOB, .pin = GPIO0 }
         },
         .pid_state = {
             .prev_error = 0.0f,
@@ -116,6 +136,11 @@ static struct joint joints[] = {
             .channel = 15,
             .pin = { .port = GPIOC, .pin = GPIO5 }
         },
+        .cur = {
+            .adc = ADC1,
+            .channel = 14,
+            .pin = { .port = GPIOC, .pin = GPIO4 }
+        },
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
@@ -141,6 +166,11 @@ static struct joint joints[] = {
             .adc = ADC1,
             .channel = 9,
             .pin = { .port = GPIOB, .pin = GPIO1 }
+        },
+        .cur = {
+            .adc = ADC1,
+            .channel = 6,
+            .pin = { .port = GPIOA, .pin = GPIO6 }
         },
         .pid_state = {
             .prev_error = 0.0f,

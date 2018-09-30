@@ -42,10 +42,12 @@ struct adc_pin {
 struct joint {
     const struct motor motor;
     const struct adc_pin pot;
+    const struct adc_pin cur;
     struct pid_state pid_state;
     struct pid_params pid_params;
     float setpoint;
     float adc_angle;
+    float adc_cur;
     float output;
     float prev_adc[FILTER_BUF_SIZE];
     float avg_buf[AVG_BUF_SIZE];
@@ -129,6 +131,7 @@ static void joint_init(struct joint joint)
 {
     motor_init(joint.motor);
     adc_input_init(joint.pot);
+    adc_input_init(joint.cur);
 }
 
 static void pwm_output_set(struct pwm_output output, float val)
@@ -319,6 +322,7 @@ static float avg_filter(struct joint *joint, float input)
 static void joint_control(struct joint *joint, float delta_t)
 {
     float measured = pot_input_read(joint->pot);
+    float cur_measured = pot_input_read(joint->cur);
     float filtered = median_filter(joint, measured);
     float output = 0;
 
@@ -330,6 +334,7 @@ static void joint_control(struct joint *joint, float delta_t)
         set_motor(joint->motor, output);
     }
 
+    joint->adc_cur = cur_measured;
     joint->adc_angle = measured;
 }
 
