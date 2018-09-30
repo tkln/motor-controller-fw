@@ -30,7 +30,7 @@ struct motor {
     struct pin dir;
 };
 
-struct pot {
+struct adc_pin {
     uint32_t adc;
     uint8_t channel;
     struct pin pin;
@@ -41,7 +41,7 @@ struct pot {
 
 struct joint {
     const struct motor motor;
-    const struct pot pot;
+    const struct adc_pin pot;
     struct pid_state pid_state;
     struct pid_params pid_params;
     float setpoint;
@@ -91,9 +91,10 @@ void usart3_isr(void)
     }
 }
 
-static void pot_input_init(struct pot pot)
+static void adc_input_init(struct adc_pin adc_pin)
 {
-    gpio_mode_setup(pot.pin.port, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, pot.pin.pin);
+    gpio_mode_setup(adc_pin.pin.port, GPIO_MODE_ANALOG, GPIO_PUPD_NONE,
+                    adc_pin.pin.pin);
     adc_power_off(ADC1);
     adc_disable_scan_mode(ADC1);
     adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_3CYC);
@@ -127,7 +128,7 @@ static void motor_init(struct motor motor)
 static void joint_init(struct joint joint)
 {
     motor_init(joint.motor);
-    pot_input_init(joint.pot);
+    adc_input_init(joint.pot);
 }
 
 static void pwm_output_set(struct pwm_output output, float val)
@@ -214,7 +215,7 @@ static float read_adc_simple(uint32_t adc, uint8_t channel)
     return (float)reg16 / (1<<12);
 }
 
-static float pot_input_read(struct pot pot)
+static float pot_input_read(struct adc_pin pot)
 {
     return read_adc_simple(pot.adc, pot.channel);
 }
