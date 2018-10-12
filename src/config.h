@@ -1,3 +1,15 @@
+const struct pin brake_relay_pin = {
+    .port = GPIOE, .pin = GPIO4
+};
+
+const struct pin gripper_relay_pin = {
+    .port = GPIOE, .pin = GPIO6
+};
+
+const struct pin motor_enable_pin = {
+    .port = GPIOE, .pin = GPIO5
+};
+
 static struct joint joints[] = {
     { /* joint 1, joints[0] */
         .motor = {
@@ -98,7 +110,7 @@ static struct joint joints[] = {
                      .oc_id = TIM_OC1,
                      .pin = { .port = GPIOC, .pin = GPIO6, .af = GPIO_AF2 }
             },
-            .dir = { .port = GPIOA, .pin = GPIO13 },
+            .dir = { .port = GPIOD, .pin = GPIO1 },
         },
         .pot = { /* 4 */
             .adc = ADC1,
@@ -129,7 +141,7 @@ static struct joint joints[] = {
                      .oc_id = TIM_OC3,
                      .pin = { .port = GPIOC, .pin = GPIO8, .af = GPIO_AF2 }
             },
-            .dir = { .port = GPIOA, .pin = GPIO15 },
+            .dir = { .port = GPIOD, .pin = GPIO3 },
         },
         .pot = { /* 5 */
             .adc = ADC1,

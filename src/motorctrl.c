@@ -59,18 +59,6 @@ volatile int safemode = 1;
 volatile int brake = 1;
 volatile int gripper = 0;
 
-const struct pin brake_relay_pin = {
-    .port = GPIOE, .pin = GPIO4
-};
-
-const struct pin gripper_relay_pin = {
-    .port = GPIOE, .pin = GPIO6
-};
-
-const struct pin motor_enable_pin = {
-    .port = GPIOE, .pin = GPIO5
-};
-
 
 #define USART_BUF_LEN 128 + 1
 
