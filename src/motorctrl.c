@@ -216,7 +216,7 @@ static float read_adc_simple(uint32_t adc, uint8_t channel)
     return (float)reg16 / (1<<12);
 }
 
-static float pot_input_read(struct adc_pin pot)
+static float adc_read(struct adc_pin pot)
 {
     return read_adc_simple(pot.adc, pot.channel);
 }
@@ -322,8 +322,8 @@ static void joint_control(const struct joint_hw *joint_hw,
                           struct joint_state *joint,
                           float delta_t)
 {
-    float measured = pot_input_read(joint_hw->pot);
-    float cur_measured = pot_input_read(joint_hw->cur);
+    float measured = adc_read(joint_hw->pot);
+    float cur_measured = adc_read(joint_hw->cur);
     float filtered = median_filter(joint, measured);
     float output = 0;
 
