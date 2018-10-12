@@ -4,6 +4,7 @@
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/cm3/nvic.h>
+#include <libopencm3/cm3/systick.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -79,6 +80,29 @@ void usart3_isr(void)
             new_message = 1;
         }
     }
+}
+
+volatile uint32_t system_millis;
+
+void sys_tick_handler(void)
+{
+    ++system_millis;
+}
+
+static void systick_setup(void)
+{
+    /* 1 ms interrupt rate */
+    systick_set_reload(120000);
+    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
+    systick_counter_enable();
+    systick_interrupt_enable();
+}
+
+static void msleep(uint32_t delay)
+{
+    uint32_t wake = system_millis + delay;
+    while (system_millis < wake)
+        ;
 }
 
 static void adc_input_init(struct adc_pin adc_pin)
@@ -384,6 +408,7 @@ int main(void)
     const unsigned delay = 50000;
 
     clock_setup();
+    systick_setup();
     gpio_setup();
     timer_setup();
     adc_setup();
@@ -396,8 +421,7 @@ int main(void)
     printf("boot\n");
 
     while (1) {
-        for (i = 0; i < delay; i++)
-            __asm__("nop");
+        msleep(10);
 
         if (new_message)
             handle_msg();
