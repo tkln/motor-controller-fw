@@ -407,7 +407,10 @@ static void handle_msg(void)
         printf("invalid command\n");
     }
 
+    gpio_set(GPIOD, GPIO12);
     print_response();
+    gpio_clear(GPIOD, GPIO12);
+
     new_message = 0;
     usart_msg_len = 0;
 }
@@ -436,7 +439,6 @@ int main(void)
         if (new_message)
             handle_msg();
 
-        gpio_toggle(GPIOD, GPIO12);
         for (i = 0; i < ARRAY_LEN(joint_states); ++i) {
             joint_measure_current(joint_hws + i, joint_states + i);
             joint_measure_angle(joint_hws + i, joint_states + i);
