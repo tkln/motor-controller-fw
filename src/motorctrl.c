@@ -399,7 +399,7 @@ static void handle_msg(void)
         gripper = new_gripper;
     } else if (msg[0] == 'c') {
         print_currents();
-    } else if (!strncmp(msg, "debug", 5)) {
+    } else if (msg[0] == 'd') {
         debug();
     } else if (msg[0] == '\r') {
         /* Empty message is a state polling message */
