@@ -348,6 +348,8 @@ static void joint_drive(const struct joint_hw *joint_hw,
 
 const char *state_msg_format = "angle: j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
 
+const char *pid_param_msg_format = "pid: j: %d, p: %f, i: %f, d: %f, i_max: %f\n";
+
 static void print_response(void)
 {
     printf(state_msg_format,
@@ -381,12 +383,26 @@ static void set_setpoints(float *setpoints)
         joint_states[i].setpoint = setpoints[i];
 }
 
+static void print_pid_params(void)
+{
+    size_t i;
+    struct pid_params *params;
+
+    for (i = 0; i < ARRAY_LEN(joint_states); ++i) {
+        params = joint_pid_params + i;
+        printf(pid_param_msg_format, i, params->p, params->i, params->d,
+               params->i_max);
+    }
+}
+
 static void handle_msg(void)
 {
     float setpoints[ARRAY_LEN(joint_states)];
-    int ret;
     int new_safemode = 1, new_brake = 1, new_gripper = 1;
     char *msg = (char *)usart_buf;
+    struct pid_params params;
+    int joint;
+    int ret;
 
     ret = sscanf(msg, state_msg_format, setpoints, setpoints + 1, setpoints + 2,
                 setpoints + 3, setpoints + 4, setpoints + 5, &new_safemode,
@@ -397,6 +413,19 @@ static void handle_msg(void)
         brake = new_brake;
         safemode = new_safemode;
         gripper = new_gripper;
+        goto out;
+    }
+
+    ret = sscanf(msg, pid_param_msg_format, &joint, &params.p, &params.i,
+                 &params.d, &params.i_max);
+    if (ret == 5) {
+        joint_pid_params[joint] = params;
+        print_pid_params();
+        goto out;
+    }
+
+    if (msg[0] == 'p') {
+        print_pid_params();
     } else if (msg[0] == 'c') {
         print_currents();
     } else if (msg[0] == 'd') {
@@ -407,6 +436,7 @@ static void handle_msg(void)
         printf("invalid command\n");
     }
 
+out:
     gpio_set(GPIOD, GPIO12);
     print_response();
     gpio_clear(GPIOD, GPIO12);
