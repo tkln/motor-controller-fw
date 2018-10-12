@@ -391,6 +391,8 @@ static void handle_msg(void)
         gripper = new_gripper;
     } else if (!strncmp(msg, "debug", 5)) {
         debug();
+    } else if (msg[0] == '\r') {
+        /* Empty message is a state polling message */
     } else {
         printf("invalid command\n");
     }
