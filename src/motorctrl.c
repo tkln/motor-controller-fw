@@ -40,17 +40,6 @@ struct adc_pin {
     struct pin pin;
 };
 
-struct joint {
-    struct pid_state pid_state;
-    struct pid_params pid_params;
-    float setpoint;
-    float adc_angle;
-    float adc_cur;
-    float output;
-    float prev_adc[FILTER_BUF_SIZE];
-    float avg_buf[AVG_BUF_SIZE];
-};
-
 #include "config.h"
 
 volatile int safemode = 1;
@@ -303,7 +292,7 @@ static inline void sort(float *buf, size_t len)
     }
 }
 
-static float median_filter(struct joint *joint, float input)
+static float median_filter(struct joint_state *joint, float input)
 {
     float filter_buf[FILTER_BUF_SIZE];
     memmove(joint->prev_adc, joint->prev_adc + 1, (FILTER_BUF_SIZE - 1) *
@@ -314,7 +303,7 @@ static float median_filter(struct joint *joint, float input)
     return filter_buf[FILTER_BUF_SIZE / 2];
 }
 
-static float avg_filter(struct joint *joint, float input)
+static float avg_filter(struct joint_state *joint, float input)
 {
     float filter_buf[AVG_BUF_SIZE];
     memmove(joint->avg_buf, joint->avg_buf + 1, (AVG_BUF_SIZE - 1) *
@@ -328,7 +317,9 @@ static float avg_filter(struct joint *joint, float input)
     return sum / AVG_BUF_SIZE;
 }
 
-static void joint_control(const struct joint_hw *joint_hw, struct joint *joint,
+static void joint_control(const struct joint_hw *joint_hw,
+                          const struct pid_params *pid_params,
+                          struct joint_state *joint,
                           float delta_t)
 {
     float measured = pot_input_read(joint_hw->pot);
@@ -338,7 +329,7 @@ static void joint_control(const struct joint_hw *joint_hw, struct joint *joint,
 
     filtered = avg_filter(joint, filtered);
     if (!safemode && !brake) {
-        output = pid(&joint->pid_state, joint->pid_params, filtered,
+        output = pid(&joint->pid_state, *pid_params, filtered,
                 joint->setpoint, delta_t);
         joint->output = output;
         set_motor(joint_hw->motor, output);
@@ -352,30 +343,32 @@ const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, 
 
 static void response(void)
 {
-    printf(state_msg_format, joints[0].adc_angle, joints[1].adc_angle,
-           joints[2].adc_angle, joints[3].adc_angle, joints[4].adc_angle,
-           joints[5].adc_angle, safemode, brake, gripper);
+    printf(state_msg_format,
+           joint_states[0].adc_angle, joint_states[1].adc_angle,
+           joint_states[2].adc_angle, joint_states[3].adc_angle,
+           joint_states[4].adc_angle, joint_states[5].adc_angle,
+           safemode, brake, gripper);
 }
 
 static void debug(void)
 {
     size_t i;
-    for (i = 0; i < ARRAY_LEN(joints); ++i)
-        printf("m: %f, s: %f, o: %f, i: %f\r\n", joints[i].adc_angle,
-               joints[i].setpoint, joints[i].output,
-               joints[i].pid_state.integral);
+    for (i = 0; i < ARRAY_LEN(joint_states); ++i)
+        printf("m: %f, s: %f, o: %f, i: %f\r\n", joint_states[i].adc_angle,
+               joint_states[i].setpoint, joint_states[i].output,
+               joint_states[i].pid_state.integral);
 }
 
 static void set_setpoints(float *setpoints)
 {
     size_t i;
-    for (i = 0; i < ARRAY_LEN(joints); ++i)
-        joints[i].setpoint = setpoints[i];
+    for (i = 0; i < ARRAY_LEN(joint_states); ++i)
+        joint_states[i].setpoint = setpoints[i];
 }
 
 static void handle_msg(void)
 {
-    float setpoints[ARRAY_LEN(joints)];
+    float setpoints[ARRAY_LEN(joint_states)];
     int ret;
     int new_safemode = 1, new_brake = 1, new_gripper = 1;
     char *msg = (char *)usart_buf;
@@ -425,8 +418,9 @@ int main(void)
             handle_msg();
 
         gpio_toggle(GPIOD, GPIO12);
-        for (i = 0; i < ARRAY_LEN(joints); ++i)
-            joint_control(joint_hws + i, joints + i, delay / 120000000.0f);
+        for (i = 0; i < ARRAY_LEN(joint_states); ++i)
+            joint_control(joint_hws + i, joint_pid_params + i, joint_states + i,
+                          delay / 120000000.0f);
 
         if (brake)
             gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);

@@ -126,87 +126,93 @@ static const struct joint_hw {
     },
 };
 
-static struct joint joints[] = {
-    { /* joint 1, joints[0] */
+static struct pid_params joint_pid_params[] = {
+    {
+        .p = 10.0f,
+        .i = 0.0f,
+        .d = 0.0f,
+        .i_max = 0.01f
+    }, {
+        .p = 50.0f,
+        .i = 10.0f,
+        .d = 0.0f,
+        .i_max = 0.01f
+    }, {
+        .p = 50.0f,
+        .i = 10.0f,
+        .d = 0.0f,
+        .i_max = 0.01f
+    }, {
+        .p = 15.0f,
+        .i = 10.0f,
+        .d = 0.0f,
+        .i_max = 0.01f
+    }, {
+        .p = 15.0f,
+        .i = 10.0f,
+        .d = 0.0f,
+        .i_max = 0.01f
+    }, {
+        .p = 10.0f,
+        .i = 0.0f,
+        .d = 0.0f,
+        .i_max = 0.01f
+    }
+};
+
+static struct joint_state {
+    struct pid_state pid_state;
+    float setpoint;
+    float adc_angle;
+    float adc_cur;
+    float output;
+    float prev_adc[FILTER_BUF_SIZE];
+    float avg_buf[AVG_BUF_SIZE];
+} joint_states[] = {
+    { /* joint 1 */
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
-        },
-        .pid_params = {
-            .p = 10.0f,
-            .i = 0.0f,
-            .d = 0.0f,
-            .i_max = 0.01f
         },
         .setpoint = 0.49f,
         .adc_angle = NAN
     },
-    { /* joint 2, joints[1] */
+    { /* joint 2 */
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
-        },
-        .pid_params = {
-            .p = 50.0f,
-            .i = 10.0f,
-            .d = 0.0f,
-            .i_max = 0.01f
         },
         .setpoint = 0.49f,
         .adc_angle = NAN
     },
-    { /* joint 3, joints[2] */
+    { /* joint 3 */
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
-        },
-        .pid_params = {
-            .p = 50.0f,
-            .i = 10.0f,
-            .d = 0.0f,
-            .i_max = 0.01f
         },
         .setpoint = 0.49f,
         .adc_angle = NAN
     },
-    { /* joint 4, joints[3] */
+    { /* joint 4 */
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
-        },
-        .pid_params = {
-            .p = 15.0f,
-            .i = 10.0f,
-            .d = 0.0f,
-            .i_max = 0.01f
         },
         .setpoint = 0.49f,
         .adc_angle = NAN
     },
-    { /* joint 5, joints[4] */
+    { /* joint 5 */
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
-        },
-        .pid_params = {
-            .p = 15.0f,
-            .i = 10.0f,
-            .d = 0.0f,
-            .i_max = 0.01f
         },
         .setpoint = 0.49f,
         .adc_angle = NAN
     },
-    { /* joint 6, joints[5] */
+    { /* joint 6 */
         .pid_state = {
             .prev_error = 0.0f,
             .integral = 0.0f
-        },
-        .pid_params = {
-            .p = 10.0f,
-            .i = 0.0f,
-            .d = 0.0f,
-            .i_max = 0.01f
         },
         .setpoint = 0.49f,
         .adc_angle = NAN
