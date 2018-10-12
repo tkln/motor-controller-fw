@@ -164,7 +164,7 @@ static struct joint_state {
     struct pid_state pid_state;
     float setpoint;
     float angle;
-    float adc_cur;
+    float current;
     float output;
     float prev_adc[FILTER_BUF_SIZE];
     float avg_buf[AVG_BUF_SIZE];

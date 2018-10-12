@@ -327,14 +327,20 @@ static void joint_measure_angle(const struct joint_hw *joint_hw,
     joint->angle = angle;
 }
 
+static void joint_measure_current(const struct joint_hw *joint_hw,
+                                  struct joint_state *joint)
+{
+    joint->current = adc_read(joint_hw->cur); /* TODO Scaling */
+}
+
 static void joint_control(const struct joint_hw *joint_hw,
                           const struct pid_params *pid_params,
                           struct joint_state *joint,
                           float delta_t)
 {
-    float cur_measured = adc_read(joint_hw->cur);
     float output = 0;
 
+    joint_measure_current(joint_hw, joint);
     joint_measure_angle(joint_hw, joint);
 
     if (!safemode && !brake) {
@@ -343,8 +349,6 @@ static void joint_control(const struct joint_hw *joint_hw,
         joint->output = output;
         set_motor(joint_hw->motor, output);
     }
-
-    joint->adc_cur = cur_measured;
 }
 
 const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
