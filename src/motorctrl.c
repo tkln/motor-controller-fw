@@ -317,26 +317,35 @@ static float avg_filter(struct joint_state *joint, float input)
     return sum / AVG_BUF_SIZE;
 }
 
+static float joint_measure_angle(const struct joint_hw *joint_hw,
+                                 struct joint_state *joint)
+{
+    float angle = adc_read(joint_hw->pot);
+
+    angle = median_filter(joint, angle);
+    angle = avg_filter(joint, angle);
+    joint->adc_angle = angle;
+
+    return angle;
+}
+
 static void joint_control(const struct joint_hw *joint_hw,
                           const struct pid_params *pid_params,
                           struct joint_state *joint,
                           float delta_t)
 {
-    float measured = adc_read(joint_hw->pot);
     float cur_measured = adc_read(joint_hw->cur);
-    float filtered = median_filter(joint, measured);
     float output = 0;
+    float angle = joint_measure_angle(joint_hw, joint);
 
-    filtered = avg_filter(joint, filtered);
     if (!safemode && !brake) {
-        output = pid(&joint->pid_state, *pid_params, filtered,
+        output = pid(&joint->pid_state, *pid_params, angle,
                 joint->setpoint, delta_t);
         joint->output = output;
         set_motor(joint_hw->motor, output);
     }
 
     joint->adc_cur = cur_measured;
-    joint->adc_angle = measured;
 }
 
 const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
