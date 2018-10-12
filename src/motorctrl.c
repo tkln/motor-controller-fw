@@ -14,6 +14,9 @@
 
 #define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))
 
+#define FILTER_BUF_SIZE 7
+#define AVG_BUF_SIZE 7
+
 struct pin {
     uint32_t port;
     uint16_t pin;
@@ -37,13 +40,7 @@ struct adc_pin {
     struct pin pin;
 };
 
-#define FILTER_BUF_SIZE 7
-#define AVG_BUF_SIZE 7
-
 struct joint {
-    const struct motor motor;
-    const struct adc_pin pot;
-    const struct adc_pin cur;
     struct pid_state pid_state;
     struct pid_params pid_params;
     float setpoint;
@@ -139,11 +136,11 @@ static void motor_init(struct motor motor)
     motor_dir_pin_init(motor.dir);
 }
 
-static void joint_init(struct joint joint)
+static void joint_init(struct joint_hw joint_hw)
 {
-    motor_init(joint.motor);
-    adc_input_init(joint.pot);
-    adc_input_init(joint.cur);
+    motor_init(joint_hw.motor);
+    adc_input_init(joint_hw.pot);
+    adc_input_init(joint_hw.cur);
 }
 
 static void pwm_output_set(struct pwm_output output, float val)
@@ -331,10 +328,11 @@ static float avg_filter(struct joint *joint, float input)
     return sum / AVG_BUF_SIZE;
 }
 
-static void joint_control(struct joint *joint, float delta_t)
+static void joint_control(const struct joint_hw *joint_hw, struct joint *joint,
+                          float delta_t)
 {
-    float measured = pot_input_read(joint->pot);
-    float cur_measured = pot_input_read(joint->cur);
+    float measured = pot_input_read(joint_hw->pot);
+    float cur_measured = pot_input_read(joint_hw->cur);
     float filtered = median_filter(joint, measured);
     float output = 0;
 
@@ -343,7 +341,7 @@ static void joint_control(struct joint *joint, float delta_t)
         output = pid(&joint->pid_state, joint->pid_params, filtered,
                 joint->setpoint, delta_t);
         joint->output = output;
-        set_motor(joint->motor, output);
+        set_motor(joint_hw->motor, output);
     }
 
     joint->adc_cur = cur_measured;
@@ -415,8 +413,8 @@ int main(void)
     uart_setup();
     relay_setup();
 
-    for (i = 0; i < ARRAY_LEN(joints); ++i)
-        joint_init(joints[i]);
+    for (i = 0; i < ARRAY_LEN(joint_hws); ++i)
+        joint_init(joint_hws[i]);
 
     printf("boot\n");
 
@@ -428,7 +426,7 @@ int main(void)
 
         gpio_toggle(GPIOD, GPIO12);
         for (i = 0; i < ARRAY_LEN(joints); ++i)
-            joint_control(&joints[i], delay / 120000000.0f);
+            joint_control(joint_hws + i, joints + i, delay / 120000000.0f);
 
         if (brake)
             gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);
