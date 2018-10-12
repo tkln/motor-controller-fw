@@ -340,15 +340,10 @@ static void joint_control(const struct joint_hw *joint_hw,
 {
     float output = 0;
 
-    joint_measure_current(joint_hw, joint);
-    joint_measure_angle(joint_hw, joint);
-
-    if (!safemode && !brake) {
-        output = pid(&joint->pid_state, *pid_params, joint->angle,
-                     joint->setpoint, delta_t);
-        joint->output = output;
-        set_motor(joint_hw->motor, output);
-    }
+    output = pid(&joint->pid_state, *pid_params, joint->angle,
+                 joint->setpoint, delta_t);
+    joint->output = output;
+    set_motor(joint_hw->motor, output);
 }
 
 const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
@@ -430,9 +425,15 @@ int main(void)
             handle_msg();
 
         gpio_toggle(GPIOD, GPIO12);
-        for (i = 0; i < ARRAY_LEN(joint_states); ++i)
-            joint_control(joint_hws + i, joint_pid_params + i, joint_states + i,
-                          delay / 120000000.0f);
+        for (i = 0; i < ARRAY_LEN(joint_states); ++i) {
+            joint_measure_current(joint_hws + i, joint_states + i);
+            joint_measure_angle(joint_hws + i, joint_states + i);
+
+            if (!safemode && !brake) {
+                joint_control(joint_hws + i, joint_pid_params + i,
+                              joint_states + i, delay / 120000000.0f);
+            }
+        }
 
         if (brake)
             gpio_clear(brake_relay_pin.port, brake_relay_pin.pin);
