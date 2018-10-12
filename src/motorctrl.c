@@ -3,6 +3,7 @@
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/flash.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 #include <stdlib.h>
@@ -346,6 +347,25 @@ static void joint_drive(const struct joint_hw *joint_hw,
     set_motor(joint_hw->motor, output);
 }
 
+/* Start of the 11th (last) general purpose flash sector */
+#define PID_PARAM_FLASH_ADDR 0x080e0000
+#define PID_PARAM_FLASH_SECTOR 11
+
+static void save_pid_params(void)
+{
+    flash_unlock();
+    /* XXX This may freeze if done more than once after reset */
+    flash_erase_sector(PID_PARAM_FLASH_SECTOR, 2); /* TODO Check status */
+    flash_program(PID_PARAM_FLASH_ADDR, (void *)&joint_pid_params,
+                  sizeof(joint_pid_params));
+}
+
+static void load_pid_params(void)
+{
+    memcpy(joint_pid_params, (void *)PID_PARAM_FLASH_ADDR,
+           sizeof(joint_pid_params));
+}
+
 const char *state_msg_format = "angle: j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
 
 const char *pid_param_msg_format = "pid: j: %d, p: %f, i: %f, d: %f, i_max: %f\n";
@@ -425,6 +445,14 @@ static void handle_msg(void)
     }
 
     switch (msg[0]) {
+    case 'l':
+        load_pid_params();
+        print_pid_params();
+        goto out;
+    case 's':
+        save_pid_params();
+        print_pid_params();
+        goto out;
     case 'p':
         print_pid_params();
         goto out;
