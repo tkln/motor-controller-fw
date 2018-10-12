@@ -163,7 +163,7 @@ static struct pid_params joint_pid_params[] = {
 static struct joint_state {
     struct pid_state pid_state;
     float setpoint;
-    float adc_angle;
+    float angle;
     float adc_cur;
     float output;
     float prev_adc[FILTER_BUF_SIZE];
@@ -175,7 +175,7 @@ static struct joint_state {
             .integral = 0.0f
         },
         .setpoint = 0.49f,
-        .adc_angle = NAN
+        .angle = NAN
     },
     { /* joint 2 */
         .pid_state = {
@@ -183,7 +183,7 @@ static struct joint_state {
             .integral = 0.0f
         },
         .setpoint = 0.49f,
-        .adc_angle = NAN
+        .angle = NAN
     },
     { /* joint 3 */
         .pid_state = {
@@ -191,7 +191,7 @@ static struct joint_state {
             .integral = 0.0f
         },
         .setpoint = 0.49f,
-        .adc_angle = NAN
+        .angle = NAN
     },
     { /* joint 4 */
         .pid_state = {
@@ -199,7 +199,7 @@ static struct joint_state {
             .integral = 0.0f
         },
         .setpoint = 0.49f,
-        .adc_angle = NAN
+        .angle = NAN
     },
     { /* joint 5 */
         .pid_state = {
@@ -207,7 +207,7 @@ static struct joint_state {
             .integral = 0.0f
         },
         .setpoint = 0.49f,
-        .adc_angle = NAN
+        .angle = NAN
     },
     { /* joint 6 */
         .pid_state = {
@@ -215,6 +215,6 @@ static struct joint_state {
             .integral = 0.0f
         },
         .setpoint = 0.49f,
-        .adc_angle = NAN
+        .angle = NAN
     }
 };

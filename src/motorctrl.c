@@ -317,16 +317,14 @@ static float avg_filter(struct joint_state *joint, float input)
     return sum / AVG_BUF_SIZE;
 }
 
-static float joint_measure_angle(const struct joint_hw *joint_hw,
-                                 struct joint_state *joint)
+static void joint_measure_angle(const struct joint_hw *joint_hw,
+                                struct joint_state *joint)
 {
     float angle = adc_read(joint_hw->pot);
 
     angle = median_filter(joint, angle);
     angle = avg_filter(joint, angle);
-    joint->adc_angle = angle;
-
-    return angle;
+    joint->angle = angle;
 }
 
 static void joint_control(const struct joint_hw *joint_hw,
@@ -336,11 +334,12 @@ static void joint_control(const struct joint_hw *joint_hw,
 {
     float cur_measured = adc_read(joint_hw->cur);
     float output = 0;
-    float angle = joint_measure_angle(joint_hw, joint);
+
+    joint_measure_angle(joint_hw, joint);
 
     if (!safemode && !brake) {
-        output = pid(&joint->pid_state, *pid_params, angle,
-                joint->setpoint, delta_t);
+        output = pid(&joint->pid_state, *pid_params, joint->angle,
+                     joint->setpoint, delta_t);
         joint->output = output;
         set_motor(joint_hw->motor, output);
     }
@@ -353,9 +352,9 @@ const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, 
 static void response(void)
 {
     printf(state_msg_format,
-           joint_states[0].adc_angle, joint_states[1].adc_angle,
-           joint_states[2].adc_angle, joint_states[3].adc_angle,
-           joint_states[4].adc_angle, joint_states[5].adc_angle,
+           joint_states[0].angle, joint_states[1].angle,
+           joint_states[2].angle, joint_states[3].angle,
+           joint_states[4].angle, joint_states[5].angle,
            safemode, brake, gripper);
 }
 
@@ -363,7 +362,7 @@ static void debug(void)
 {
     size_t i;
     for (i = 0; i < ARRAY_LEN(joint_states); ++i)
-        printf("m: %f, s: %f, o: %f, i: %f\r\n", joint_states[i].adc_angle,
+        printf("m: %f, s: %f, o: %f, i: %f\r\n", joint_states[i].angle,
                joint_states[i].setpoint, joint_states[i].output,
                joint_states[i].pid_state.integral);
 }
