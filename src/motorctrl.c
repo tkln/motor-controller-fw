@@ -424,17 +424,23 @@ static void handle_msg(void)
         goto out;
     }
 
-    if (msg[0] == 'p') {
+    switch (msg[0]) {
+    case 'p':
         print_pid_params();
-    } else if (msg[0] == 'c') {
+        goto out;
+    case 'c':
         print_currents();
-    } else if (msg[0] == 'd') {
+        goto out;
+    case 'd':
         print_debug();
-    } else if (msg[0] == '\r') {
-        /* Empty message is a state polling message */
-    } else {
-        printf("invalid command\n");
+        goto out;
+    case '\r':
+        goto out;
+    default:
+        break;
     }
+
+    printf("invalid command\n");
 
 out:
     gpio_set(GPIOD, GPIO12);
