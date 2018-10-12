@@ -346,7 +346,7 @@ static void joint_drive(const struct joint_hw *joint_hw,
     set_motor(joint_hw->motor, output);
 }
 
-const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
+const char *state_msg_format = "angle: j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
 
 static void print_response(void)
 {
