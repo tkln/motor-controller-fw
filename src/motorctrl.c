@@ -348,7 +348,7 @@ static void joint_drive(const struct joint_hw *joint_hw,
 
 const char *state_msg_format = "j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
 
-static void response(void)
+static void print_response(void)
 {
     printf(state_msg_format,
            joint_states[0].angle, joint_states[1].angle,
@@ -357,7 +357,7 @@ static void response(void)
            safemode, brake, gripper);
 }
 
-static void debug(void)
+static void print_debug(void)
 {
     size_t i;
     for (i = 0; i < ARRAY_LEN(joint_states); ++i)
@@ -400,14 +400,14 @@ static void handle_msg(void)
     } else if (msg[0] == 'c') {
         print_currents();
     } else if (msg[0] == 'd') {
-        debug();
+        print_debug();
     } else if (msg[0] == '\r') {
         /* Empty message is a state polling message */
     } else {
         printf("invalid command\n");
     }
 
-    response();
+    print_response();
     new_message = 0;
     usart_msg_len = 0;
 }
