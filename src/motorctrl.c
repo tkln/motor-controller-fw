@@ -366,6 +366,14 @@ static void debug(void)
                joint_states[i].pid_state.integral);
 }
 
+static void print_currents(void)
+{
+    printf("current: j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f\n",
+           joint_states[0].current, joint_states[1].current,
+           joint_states[2].current, joint_states[3].current,
+           joint_states[4].current, joint_states[5].current);
+}
+
 static void set_setpoints(float *setpoints)
 {
     size_t i;
@@ -389,6 +397,8 @@ static void handle_msg(void)
         brake = new_brake;
         safemode = new_safemode;
         gripper = new_gripper;
+    } else if (msg[0] == 'c') {
+        print_currents();
     } else if (!strncmp(msg, "debug", 5)) {
         debug();
     } else if (msg[0] == '\r') {
