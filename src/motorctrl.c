@@ -333,10 +333,10 @@ static void joint_measure_current(const struct joint_hw *joint_hw,
     joint->current = adc_read(joint_hw->cur); /* TODO Scaling */
 }
 
-static void joint_control(const struct joint_hw *joint_hw,
-                          const struct pid_params *pid_params,
-                          struct joint_state *joint,
-                          float delta_t)
+static void joint_drive(const struct joint_hw *joint_hw,
+                        const struct pid_params *pid_params,
+                        struct joint_state *joint,
+                        float delta_t)
 {
     float output = 0;
 
@@ -430,8 +430,8 @@ int main(void)
             joint_measure_angle(joint_hws + i, joint_states + i);
 
             if (!safemode && !brake) {
-                joint_control(joint_hws + i, joint_pid_params + i,
-                              joint_states + i, delay / 120000000.0f);
+                joint_drive(joint_hws + i, joint_pid_params + i,
+                            joint_states + i, delay / 120000000.0f);
             }
         }
 
