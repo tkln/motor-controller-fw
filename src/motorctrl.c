@@ -455,8 +455,9 @@ out:
 
 int main(void)
 {
+    uint32_t prev_millis = 0;
     unsigned i;
-    const unsigned delay = 50000;
+    int dt;
 
     clock_setup();
     systick_setup();
@@ -472,6 +473,9 @@ int main(void)
     printf("boot\n");
 
     while (1) {
+        dt = system_millis - prev_millis;
+        prev_millis = system_millis;
+
         msleep(10);
 
         if (new_message)
@@ -483,7 +487,7 @@ int main(void)
 
             if (!safemode && !brake) {
                 joint_drive(joint_hws + i, joint_pid_params + i,
-                            joint_states + i, delay / 120000000.0f);
+                            joint_states + i, dt * 0.001);
             }
         }
 
