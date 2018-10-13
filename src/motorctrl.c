@@ -15,32 +15,6 @@
 
 #define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))
 
-#define FILTER_BUF_SIZE 7
-#define AVG_BUF_SIZE 7
-
-struct pin {
-    uint32_t port;
-    uint16_t pin;
-    uint16_t af;
-};
-
-struct pwm_output {
-    struct pin pin;
-    uint32_t timer_peripheral; /* e.g. TIM1 */
-    enum tim_oc_id oc_id; /* e.g. TIM_OC1 */
-};
-
-struct motor {
-    struct pwm_output pwm;
-    struct pin dir;
-};
-
-struct adc_pin {
-    uint32_t adc;
-    uint8_t channel;
-    struct pin pin;
-};
-
 #include "config.h"
 
 volatile int safemode = 1;
