@@ -12,6 +12,7 @@
 #include <math.h>
 
 #include "pid.h"
+#include "ringbuf.h"
 
 #define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))
 
@@ -42,6 +43,17 @@ void usart3_isr(void)
         }
     }
 }
+
+struct cmd {
+    float setpoints[6];
+    bool safemode;
+    bool brake;
+    bool gripper;
+    int dt; /* ms */
+};
+
+static char cmd_queue_buf[512];
+static struct ringbuf cmd_queue;
 
 volatile uint32_t system_millis;
 
@@ -389,24 +401,37 @@ static void print_pid_params(void)
     }
 }
 
+static void print_cmd_queue_status(void)
+{
+    printf("buffer used: %zu/%zu\n",
+           ringbuf_space_used(&cmd_queue) / sizeof(struct cmd),
+           ringbuf_capacity(&cmd_queue) / sizeof(struct cmd));
+}
+
 static void handle_msg(void)
 {
-    float setpoints[ARRAY_LEN(joint_states)];
-    int new_safemode = 1, new_brake = 1, new_gripper = 1;
     char *msg = (char *)usart_buf;
+    struct cmd cmd;
     struct pid_params params;
+    size_t sz;
     int joint;
     int ret;
 
-    ret = sscanf(msg, state_msg_format, setpoints, setpoints + 1, setpoints + 2,
-                setpoints + 3, setpoints + 4, setpoints + 5, &new_safemode,
-                &new_brake, &new_gripper);
+    ret = sscanf(msg, state_msg_format,
+                 cmd.setpoints, cmd.setpoints + 1,
+                 cmd.setpoints + 2, cmd.setpoints + 3,
+                 cmd.setpoints + 4, cmd.setpoints + 5,
+                 &cmd.safemode, &cmd.brake, &cmd.gripper);
 
     if (ret == 9) {
-        set_setpoints(setpoints);
-        brake = new_brake;
-        safemode = new_safemode;
-        gripper = new_gripper;
+        cmd.dt = 1000; /* TODO parse these from the message */
+        sz = ringbuf_space_avail(&cmd_queue);
+        if (sz < sizeof(cmd)) {
+            printf("buffer overrun\n");
+            goto out;
+        }
+        ringbuf_write(&cmd_queue, &cmd, sizeof(cmd));
+        print_cmd_queue_status();
         goto out;
     }
 
@@ -423,6 +448,9 @@ static void handle_msg(void)
         load_pid_params();
         print_pid_params();
         goto out;
+    case 'b':
+        print_cmd_queue_status();
+        goto out;
     case 's':
         save_pid_params();
         print_pid_params();
@@ -437,6 +465,7 @@ static void handle_msg(void)
         print_debug();
         goto out;
     case '\r':
+        print_response();
         goto out;
     default:
         break;
@@ -446,17 +475,27 @@ static void handle_msg(void)
 
 out:
     gpio_set(GPIOD, GPIO12);
-    print_response();
+    msleep(1);
     gpio_clear(GPIOD, GPIO12);
 
     new_message = 0;
     usart_msg_len = 0;
 }
 
+static inline float lerp(float a, float b, float x)
+{
+    return a + x * (b - a);
+}
+
 int main(void)
 {
     uint32_t prev_millis = 0;
+    struct cmd cur_cmd;
+    float start_angles[6];
+    float setpoints[6];
+    int cmd_dt = 0;
     unsigned i;
+    size_t sz;
     int dt;
 
     clock_setup();
@@ -469,6 +508,8 @@ int main(void)
 
     for (i = 0; i < ARRAY_LEN(joint_hws); ++i)
         joint_init(joint_hws[i]);
+
+    ringbuf_init(&cmd_queue, cmd_queue_buf, 9); /* 1<<9 == 512 */
 
     printf("boot\n");
 
@@ -505,6 +546,33 @@ int main(void)
             gpio_clear(motor_enable_pin.port, motor_enable_pin.pin);
         else
             gpio_set(motor_enable_pin.port, motor_enable_pin.pin);
+
+        if (cmd_dt <= 0) {
+            /* 
+             * Maybe this should also wait for the joints to actually reach the
+             * setpoints within a given margin?
+             */
+            sz = ringbuf_space_used(&cmd_queue);
+            if (sz < sizeof(cur_cmd))
+                continue;
+            ringbuf_read(&cmd_queue, &cur_cmd, sizeof(cur_cmd));
+
+            cmd_dt += cur_cmd.dt;
+
+            for (i = 0; i < ARRAY_LEN(joint_states); ++i)
+                start_angles[i] = joint_states[i].angle;
+        }
+
+        for (i = 0; i < ARRAY_LEN(setpoints); ++i)
+            /* The parameters are that way around because cmd_dt counts down. */
+            setpoints[i] = lerp(cur_cmd.setpoints[i], start_angles[i],
+                                (float)cmd_dt / cur_cmd.dt);
+        set_setpoints(setpoints);
+        brake = cur_cmd.brake;
+        safemode = cur_cmd.safemode;
+        gripper = cur_cmd.gripper;
+
+        cmd_dt -= dt;
     }
     return 0;
 }
