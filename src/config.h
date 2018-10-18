@@ -35,15 +35,15 @@ struct adc_pin {
     struct pin pin;
 };
 
-const struct pin brake_relay_pin = {
+static const struct pin brake_relay_pin = {
     .port = GPIOE, .pin = GPIO4
 };
 
-const struct pin gripper_relay_pin = {
+static const struct pin gripper_relay_pin = {
     .port = GPIOE, .pin = GPIO6
 };
 
-const struct pin motor_enable_pin = {
+static const struct pin motor_enable_pin = {
     .port = GPIOE, .pin = GPIO5
 };
 
