@@ -1,3 +1,14 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/adc.h>
+
+#include <math.h>
+
+#include "pid.h"
+
 #define FILTER_BUF_SIZE 7
 #define AVG_BUF_SIZE 7
 
@@ -244,3 +255,5 @@ static struct joint_state {
         .angle = NAN
     }
 };
+
+#endif
