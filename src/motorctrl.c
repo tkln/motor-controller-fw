@@ -242,7 +242,7 @@ static void print_pid_params(void)
 
     for (i = 0; i < ARRAY_LEN(joint_states); ++i) {
         params = joint_pid_params + i;
-        printf(pid_param_msg_format, i, params->p, params->i, params->d,
+        printf(pid_param_msg_format, i + 1, params->p, params->i, params->d,
                params->i_max);
     }
 }
@@ -289,7 +289,7 @@ static void handle_msg(void)
     ret = sscanf(msg, pid_param_msg_format, &joint, &params.p, &params.i,
                  &params.d, &params.i_max);
     if (ret == 5) {
-        joint_pid_params[joint] = params;
+        joint_pid_params[joint - 1] = params;
         print_pid_params();
         goto out;
     }
