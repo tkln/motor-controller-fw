@@ -316,6 +316,7 @@ static void handle_msg(void)
         print_debug();
         goto out;
     case '\r':
+    case '\n':
         print_response();
         goto out;
     default:
