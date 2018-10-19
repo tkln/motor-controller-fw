@@ -18,7 +18,7 @@
 ##
 
 BINARY = motorctrl
-OBJS += ./retarget.o ./pid.o ./ringbuf.o ./fault.o
+OBJS += ./retarget.o ./pid.o ./ringbuf.o ./fault.o ./joint.o
 LDLIBS += -lm
 
 OPENCM3_DIR = ../libopencm3
