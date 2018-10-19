@@ -6,8 +6,8 @@
 #include <stdbool.h>
 
 struct ringbuf {
-    size_t head;
-    size_t tail;
+    volatile size_t head;
+    volatile size_t tail;
     size_t mask;
     size_t mask2;
     char *buf;

@@ -24,24 +24,41 @@ volatile int brake = 1;
 volatile int gripper = 0;
 
 
-#define USART_BUF_LEN 128 + 1
+#define USART_BUF_LEN 512 + 1
 
-volatile int new_message = 0;
-volatile uint8_t usart_buf[USART_BUF_LEN] = {0};
-volatile uint16_t usart_msg_len = 0;
+static char msg_queue_buf[512];
+static struct ringbuf msg_queue;
+volatile int new_messages = 0;
+
 
 void usart3_isr(void)
 {
     static uint8_t data;
-    if ((USART_CR1(USART3) & USART_CR1_RXNEIE) &&
-        (USART_SR(USART3) & USART_SR_RXNE)) {
-        usart_msg_len %= (USART_BUF_LEN - 1);
-        data = usart_recv(USART3);
-        usart_buf[usart_msg_len++] = data;
-        if (data == '\r' || data == '\n') {
-            usart_buf[usart_msg_len] = '\0';
-            new_message = 1;
+    static uint8_t msg_len = 0;
+    static size_t msg_len_pos = 0;
+
+    if (!((USART_CR1(USART3) & USART_CR1_RXNEIE) &&
+        (USART_SR(USART3) & USART_SR_RXNE)))
+        return;
+
+    data = usart_recv(USART3);
+
+    ringbuf_write(&msg_queue, &data, sizeof(data));
+    ++msg_len;
+
+    if (data == '\r' || data == '\n') {
+        /* Round even to keep length fields aligned */
+        if (msg_len & 1) {
+            ringbuf_write(&msg_queue, "", 1);
+            ++msg_len;
         }
+
+        msg_queue.buf[msg_len_pos] = msg_len;
+
+        msg_len = 0;
+        ++new_messages;
+        msg_len_pos = ringbuf_mask(&msg_queue, msg_queue.head);
+        ringbuf_write(&msg_queue, &msg_len, sizeof(msg_len));
     }
 }
 
@@ -239,13 +256,18 @@ static void print_cmd_queue_status(void)
 
 static void handle_msg(void)
 {
-    char *msg = (char *)usart_buf;
+    static char msg[256];
+    uint8_t msg_len;
     struct cmd cmd;
     struct pid_params params;
     size_t sz;
     int joint;
     int ret;
 
+    ringbuf_read(&msg_queue, &msg_len, sizeof(msg_len));
+    ringbuf_read(&msg_queue, &msg, msg_len);
+    --new_messages;
+    
     ret = sscanf(msg, state_msg_format,
                  cmd.setpoints, cmd.setpoints + 1,
                  cmd.setpoints + 2, cmd.setpoints + 3,
@@ -307,8 +329,6 @@ out:
     msleep(1);
     gpio_clear(GPIOD, GPIO12);
 
-    new_message = 0;
-    usart_msg_len = 0;
 }
 
 static inline float lerp(float a, float b, float x)
@@ -338,7 +358,9 @@ int main(void)
     for (i = 0; i < ARRAY_LEN(joint_hws); ++i)
         joint_init(joint_hws[i]);
 
+    ringbuf_init(&msg_queue, msg_queue_buf, 9); /* 1<<9 == 512 */
     ringbuf_init(&cmd_queue, cmd_queue_buf, 9); /* 1<<9 == 512 */
+    ringbuf_write(&msg_queue, "", 1); /* Place a padding byte */
 
     printf("boot\n");
 
@@ -348,7 +370,7 @@ int main(void)
 
         msleep(10);
 
-        if (new_message)
+        while (new_messages)
             handle_msg();
 
         for (i = 0; i < ARRAY_LEN(joint_states); ++i) {
