@@ -404,14 +404,21 @@ int main(void)
              * setpoints within a given margin?
              */
             sz = ringbuf_space_used(&cmd_queue);
-            if (sz < sizeof(cur_cmd))
+            if (sz < sizeof(cur_cmd)) {
+                /* Use current state as starting point if the buffer is empty */
+                for (i = 0; i < 6; ++i)
+                    start_angles[i] = joint_states[i].angle;
                 continue;
+            } else {
+                /* Use the old setpoins as the start angles */
+                for (i = 0; i < ARRAY_LEN(joint_states); ++i)
+                    start_angles[i] = setpoints[i];
+            }
+
             ringbuf_read(&cmd_queue, &cur_cmd, sizeof(cur_cmd));
 
             cmd_dt += cur_cmd.dt;
 
-            for (i = 0; i < ARRAY_LEN(joint_states); ++i)
-                start_angles[i] = joint_states[i].angle;
         }
 
         for (i = 0; i < ARRAY_LEN(setpoints); ++i)
