@@ -198,7 +198,7 @@ static void load_pid_params(void)
            sizeof(joint_pid_params));
 }
 
-const char *state_msg_format = "angle: j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i\n";
+const char *state_msg_format = "angle: j1: %f, j2: %f, j3: %f, j4: %f, j5: %f, j6: %f, safemode: %i, brake: %i, gripper: %i, dt: %i\n";
 
 const char *pid_param_msg_format = "pid: j: %d, p: %f, i: %f, d: %f, i_max: %f\n";
 
@@ -272,10 +272,9 @@ static void handle_msg(void)
                  cmd.setpoints, cmd.setpoints + 1,
                  cmd.setpoints + 2, cmd.setpoints + 3,
                  cmd.setpoints + 4, cmd.setpoints + 5,
-                 &cmd.safemode, &cmd.brake, &cmd.gripper);
+                 &cmd.safemode, &cmd.brake, &cmd.gripper, &cmd.dt);
 
-    if (ret == 9) {
-        cmd.dt = 1000; /* TODO parse these from the message */
+    if (ret == 10) {
         sz = ringbuf_space_avail(&cmd_queue);
         if (sz < sizeof(cmd)) {
             printf("buffer overrun\n");
