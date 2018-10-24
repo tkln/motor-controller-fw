@@ -26,7 +26,7 @@ volatile int gripper = 0;
 
 #define USART_BUF_LEN 512 + 1
 
-static char msg_queue_buf[512];
+static char msg_queue_buf[1024];
 static struct ringbuf msg_queue;
 volatile int new_messages = 0;
 
@@ -42,6 +42,9 @@ void usart3_isr(void)
         return;
 
     data = usart_recv(USART3);
+
+    if (ringbuf_full(&msg_queue))
+        return;
 
     ringbuf_write(&msg_queue, &data, sizeof(data));
     ++msg_len;
@@ -336,6 +339,7 @@ static inline float lerp(float a, float b, float x)
     return a + x * (b - a);
 }
 
+
 int main(void)
 {
     uint32_t prev_millis = 0;
@@ -358,7 +362,7 @@ int main(void)
     for (i = 0; i < ARRAY_LEN(joint_hws); ++i)
         joint_init(joint_hws[i]);
 
-    ringbuf_init(&msg_queue, msg_queue_buf, 9); /* 1<<9 == 512 */
+    ringbuf_init(&msg_queue, msg_queue_buf, 10); /* 1<<10 == 1024 */
     ringbuf_init(&cmd_queue, cmd_queue_buf, 9); /* 1<<9 == 512 */
     ringbuf_write(&msg_queue, "", 1); /* Place a padding byte */
 
