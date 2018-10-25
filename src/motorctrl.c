@@ -26,7 +26,10 @@ volatile int gripper = 0;
 
 #define USART_BUF_LEN 512 + 1
 
-static char msg_queue_buf[512];
+#define MSG_QUEUE_BUF_SZ_ORD 9
+#define CMD_QUEUE_BUF_SZ_ORD 10
+
+static char msg_queue_buf[1<<MSG_QUEUE_BUF_SZ_ORD];
 static struct ringbuf msg_queue;
 volatile int new_messages = 0;
 
@@ -70,7 +73,7 @@ struct cmd {
     int dt; /* ms */
 };
 
-static char cmd_queue_buf[512];
+static char cmd_queue_buf[1<<CMD_QUEUE_BUF_SZ_ORD];
 static struct ringbuf cmd_queue;
 
 volatile uint32_t system_millis;
@@ -358,8 +361,8 @@ int main(void)
     for (i = 0; i < ARRAY_LEN(joint_hws); ++i)
         joint_init(joint_hws[i]);
 
-    ringbuf_init(&msg_queue, msg_queue_buf, 9); /* 1<<9 == 512 */
-    ringbuf_init(&cmd_queue, cmd_queue_buf, 9); /* 1<<9 == 512 */
+    ringbuf_init(&msg_queue, msg_queue_buf, MSG_QUEUE_BUF_SZ_ORD);
+    ringbuf_init(&cmd_queue, cmd_queue_buf, CMD_QUEUE_BUF_SZ_ORD);
     ringbuf_write(&msg_queue, "", 1); /* Place a padding byte */
 
     printf("boot\n");
