@@ -421,8 +421,10 @@ int main(void)
             sz = ringbuf_space_used(&cmd_queue);
             if (sz < sizeof(cur_cmd)) {
                 /* Use current state as starting point if the buffer is empty */
-                for (i = 0; i < 6; ++i)
+                for (i = 0; i < 6; ++i) {
                     start_angles[i] = joint_states[i].angle;
+                    setpoints[i] = start_angles[i];
+                }
                 continue;
             } else {
                 /* Use the old setpoins as the start angles */
