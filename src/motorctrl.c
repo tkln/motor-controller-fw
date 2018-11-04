@@ -34,6 +34,8 @@ static char msg_queue_buf[1<<MSG_QUEUE_BUF_SZ_ORD];
 static struct ringbuf msg_queue;
 volatile int new_messages = 0;
 
+static uint32_t blink_led_off_millis;
+
 
 void usart3_isr(void)
 {
@@ -338,9 +340,7 @@ static void handle_msg(void)
 
 out:
     gpio_set(GPIOD, GPIO12);
-    msleep(1);
-    gpio_clear(GPIOD, GPIO12);
-
+    blink_led_off_millis = system_millis + 10;
 }
 
 static inline float lerp(float a, float b, float x)
@@ -409,6 +409,9 @@ int main(void)
             gpio_clear(motor_enable_pin.port, motor_enable_pin.pin);
         else
             gpio_set(motor_enable_pin.port, motor_enable_pin.pin);
+
+        if (system_millis > blink_led_off_millis)
+            gpio_clear(GPIOD, GPIO12);
 
         if (cmd_dt <= 0) {
             /* 
