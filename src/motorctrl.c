@@ -14,6 +14,7 @@
 #include "pid.h"
 #include "ringbuf.h"
 #include "joint.h"
+#include "angle.h"
 
 #define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))
 
@@ -207,10 +208,14 @@ const char *pid_param_msg_format = "pid: j: %d, p: %f, i: %f, d: %f, i_max: %f\n
 
 static void print_response(void)
 {
+    float rads[6];
+    unsigned i;
+
+    for (i = 0; i < ARRAY_LEN(joint_states); ++i)
+        rads[i] = joint_adc2rad(i, joint_states[i].angle);
+
     printf(state_msg_format,
-           joint_states[0].angle, joint_states[1].angle,
-           joint_states[2].angle, joint_states[3].angle,
-           joint_states[4].angle, joint_states[5].angle,
+           rads[0], rads[1], rads[2], rads[3], rads[4], rads[5],
            safemode, brake, gripper);
 }
 
@@ -263,6 +268,7 @@ static void handle_msg(void)
     uint8_t msg_len;
     struct cmd cmd;
     struct pid_params params;
+    unsigned i;
     size_t sz;
     int joint;
     int ret;
@@ -276,6 +282,9 @@ static void handle_msg(void)
                  cmd.setpoints + 2, cmd.setpoints + 3,
                  cmd.setpoints + 4, cmd.setpoints + 5,
                  &cmd.safemode, &cmd.brake, &cmd.gripper, &cmd.dt);
+
+    for (i = 0; i < 6; ++i)
+        cmd.setpoints[i] = joint_rad2adc(i, cmd.setpoints[i]);
 
     if (ret == 10) {
         sz = ringbuf_space_avail(&cmd_queue);
