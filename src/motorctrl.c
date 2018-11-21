@@ -36,6 +36,7 @@ volatile int new_messages = 0;
 
 static uint32_t blink_led_off_millis;
 
+static bool interpolating = false;
 
 void usart3_isr(void)
 {
@@ -260,7 +261,7 @@ static void print_pid_params(void)
 static void print_cmd_queue_status(void)
 {
     printf("buffer used: %zu/%zu\n",
-           ringbuf_space_used(&cmd_queue) / sizeof(struct cmd),
+           ringbuf_space_used(&cmd_queue) / sizeof(struct cmd) + interpolating,
            ringbuf_capacity(&cmd_queue) / sizeof(struct cmd));
 }
 
@@ -425,17 +426,18 @@ int main(void)
                     start_angles[i] = joint_states[i].angle;
                     setpoints[i] = start_angles[i];
                 }
+                interpolating = false;
                 continue;
             } else {
                 /* Use the old setpoins as the start angles */
                 for (i = 0; i < ARRAY_LEN(joint_states); ++i)
                     start_angles[i] = setpoints[i];
+                interpolating = true;
             }
 
             ringbuf_read(&cmd_queue, &cur_cmd, sizeof(cur_cmd));
 
             cmd_dt += cur_cmd.dt;
-
         }
 
         for (i = 0; i < ARRAY_LEN(setpoints); ++i)
